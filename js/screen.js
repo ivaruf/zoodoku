@@ -45,6 +45,14 @@ function isFullscreen() {
   return !!(document.fullscreenElement || document.webkitFullscreenElement);
 }
 
+/* Its own two words per language: this file imports nothing, js/i18n.js
+   included. <html lang> is set from arcade.lang.v1 before first paint, and
+   `arcade:lang` says when it changes. */
+const WORDS = {
+  nb: ["Fullskjerm", "Avslutt fullskjerm"],
+  en: ["Fullscreen", "Exit fullscreen"],
+};
+
 /*
  * Keep label, title and aria-pressed matching reality, whoever changed it.
  * The glyph is swapped by CSS off the same aria-pressed, so what is drawn and
@@ -53,7 +61,8 @@ function isFullscreen() {
  */
 function paint() {
   const active = isFullscreen();
-  const label = active ? "Exit fullscreen" : "Fullscreen";
+  const words = WORDS[document.documentElement.lang] || WORDS.nb;
+  const label = active ? words[1] : words[0];
   button.setAttribute("aria-pressed", String(active));
   button.setAttribute("aria-label", label);
   button.title = label;
@@ -77,4 +86,6 @@ if (button && request && exit) {
 
   document.addEventListener("fullscreenchange", paint);
   document.addEventListener("webkitfullscreenchange", paint);
+  // js/i18n.js announces a language switch; repaint the label in the new one.
+  document.addEventListener("arcade:lang", paint);
 }

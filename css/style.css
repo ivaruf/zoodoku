@@ -366,6 +366,29 @@ h3 {
   box-shadow: 0 1px 0 var(--ink);
 }
 
+/* Language: the same segmented pair, each option its flag and its endonym.
+   The flag is a little painted tile with an ink rim, like everything else on
+   this table — kitchens' art, the zoo's frame. Pressed, it sinks in sun
+   yellow like any other choice; the flag itself never changes colour. */
+.seg.lang button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 8px;
+}
+/* flex-wrap above is the landscape-phone answer: a menu column there is
+   ~290px, and once its label takes its gutter a flag plus "English" no
+   longer fits beside each other — so the flag steps above the word rather
+   than the word spilling out of its button. */
+.seg.lang .flag {
+  flex: none;
+  width: 24px;
+  height: 17px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+
 /* Paws: a rating row. Every paw button is the same size; the lit ones are
    coral, the rest a faint outline of a paw. */
 .paws button {
@@ -1184,6 +1207,20 @@ body.confirming::before {
 }
 .confirm-panel .pair {
   margin-top: 6px;
+}
+
+/* With no script there is no game; say so on the meadow, in both
+   languages, since the head script that picks one never ran. */
+.noscript {
+  position: fixed;
+  inset: auto 16px 16px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--board);
+  color: var(--ink);
+  font-weight: 800;
+  text-align: center;
 }
 
 /* ============================================================ crash bar */

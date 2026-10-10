@@ -5,7 +5,7 @@
  * The engine only knows digits 1..9. Everything a player actually *sees* in a
  * cell comes from here: symbolMarkup(d, skin) hands back an inline <svg>
  * string, symbolName(d, skin) hands back the word a screen reader or a hint
- * should use ("fox", "foxes", "7"). Skin is pure rendering and lives nowhere
+ * should use ("fox", "foxes", "7" — or "rev", in Norwegian). Skin is pure rendering and lives nowhere
  * else (DESIGN.md §2, §5).
  *
  * HOW THE ANIMALS ARE DRAWN. Hand-authored SVG on a 100×100 viewBox with a
@@ -41,6 +41,8 @@
  * Every string is built once at module load and cached; symbolMarkup is an
  * array lookup per call.
  */
+
+import { t } from './i18n.js';
 
 const INK = '#2e4a48';
 
@@ -342,10 +344,26 @@ export function symbolMarkup(d, skin) {
   return skin === 'numbers' ? NUMBER_SVG[d - 1] : ANIMAL_SVG[d - 1];
 }
 
-/** The word for digit d: 'fox' / 'foxes' for animals, '7' / '7s' for numbers. */
+/*
+ * The words for digit d, in the current language (js/i18n.js holds them; the
+ * `name` and `plural` fields above stay English, as ids for the art).
+ *   symbolName(d, skin)    'fox' / 'rev', or '7'          (plural: 'foxes' / 'rever')
+ *   symbolThe(d, skin)     'the fox' / 'reven', 'the 7' / '7-eren'
+ *   symbolA(d, skin)       'a fox' / 'en rev', 'a 7' / 'en 7-er'
+ * Norwegian folds the article into the noun, which is why a hint asks for
+ * the whole phrase rather than gluing "the " onto a name.
+ */
+const idOf = (d, skin) => (skin === 'numbers' ? null : ANIMALS[d - 1].id);
+
 export function symbolName(d, skin, { plural = false } = {}) {
   if (!(d >= 1 && d <= 9)) return '';
-  if (skin === 'numbers') return plural ? `${d}s` : String(d);
-  const a = ANIMALS[d - 1];
-  return plural ? a.plural : a.name;
+  return t(plural ? 'symMany' : 'symName', idOf(d, skin), d);
+}
+export function symbolThe(d, skin) {
+  if (!(d >= 1 && d <= 9)) return '';
+  return t('symThe', idOf(d, skin), d);
+}
+export function symbolA(d, skin) {
+  if (!(d >= 1 && d <= 9)) return '';
+  return t('symA', idOf(d, skin), d);
 }

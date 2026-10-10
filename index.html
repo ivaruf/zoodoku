@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="nb">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -47,6 +47,22 @@
       data-handled tells the crash bar at the bottom of this file.
     -->
     <script src="../arcade/exit.js" defer data-handled="optional"></script>
+    <!--
+      The language, before anything is painted (hub §2, "Two languages,
+      Norwegian first"): bokmål unless the player chose English, in the one
+      key the whole hub shares. The page below is WRITTEN in bokmål, so the
+      default never flashes English; js/i18n.js repaints it for "en". Inline
+      and classic because it must run before first paint and cannot 404.
+    -->
+    <script>
+      (function () {
+        var lang = "nb";
+        try {
+          if (localStorage.getItem("arcade.lang.v1") === "en") lang = "en";
+        } catch (e) {}
+        document.documentElement.lang = lang;
+      })();
+    </script>
     <!-- Classic and self-contained: stops a resting thumb selecting text or
          opening Copy / Look Up on a tablet (hub CLAUDE.md §2). -->
     <script src="js/touch-guard.js" defer></script>
@@ -72,32 +88,34 @@
             ><span aria-hidden="true">o</span><span aria-hidden="true">k</span
             ><span aria-hidden="true">u</span>
           </h1>
-          <p class="tagline">Sudoku, starting with a fox.</p>
+          <p class="tagline" data-i18n="tagline">Sudoku som starter med en rev.</p>
           <!-- A tilted 4×4 board with a few animals on it, drawn by js/ui.js
                from js/animals.js. Decoration only. -->
           <div id="title-scene" class="title-scene" aria-hidden="true"></div>
         </div>
 
         <nav class="title-doors" aria-label="Start">
-          <!-- The way IN, in the game's own words. Its two lines are written by
-               js/ui.js: "▶ Follow the trail" over "Level 12 · Meadow 6×6", or
-               "▶ Back to your puzzle" when a board is waiting in storage. -->
+          <!-- The way IN, in plain menu words (hub §2, "Menus speak plainly").
+               Its two lines are written by js/main.js: "▶ Spill" over
+               "Nivå 12 · Engen 6×6", or "▶ Fortsett" when a board is waiting
+               in storage. The zoo's voice is in the subline, not the button. -->
           <button type="button" id="door-trail" class="btn primary door-primary" data-autofocus>
-            <span id="door-trail-main" class="door-main">▶ Follow the trail</span>
-            <span id="door-trail-sub" class="door-sub">Level 1 · Pond 4×4</span>
+            <span id="door-trail-main" class="door-main">▶ Spill</span>
+            <span id="door-trail-sub" class="door-sub">Nivå 1 · Dammen 4×4</span>
           </button>
           <div class="door-pair">
-            <button type="button" id="door-map" class="btn">Trail map</button>
-            <button type="button" id="door-free" class="btn">Free roam</button>
+            <button type="button" id="door-map" class="btn" data-i18n="door.levels">Nivåer</button>
+            <button type="button" id="door-free" class="btn" data-i18n="door.free">Fritt spill</button>
           </div>
           <button type="button" id="door-howto" class="btn ghost">
-            <span id="howto-tag" class="howto-tag" hidden>New here?</span>
-            How to play
+            <span id="howto-tag" class="howto-tag" data-i18n="door.newHere" hidden>Ny her?</span>
+            <span data-i18n="door.howto">Slik spiller du</span>
           </button>
           <!-- The way OUT. Plain words, never the game's voice (hub §2).
-               Hidden until arcade/exit.js says there is somewhere to go. -->
+               Hidden until arcade/exit.js says there is somewhere to go;
+               js/ui.js words it in the current language. -->
           <button type="button" id="title-exit" class="btn ghost exit" hidden>
-            Back to arcade
+            Tilbake til arkaden
           </button>
         </nav>
 
@@ -105,8 +123,9 @@
              never interrupt a board (hub §3; js/update.js). -->
         <div class="title-foot">
           <button type="button" id="update" class="btn update" hidden>
-            <span class="update-main">A new zoo is ready</span>
-            <span class="update-sub">Tap to update</span>
+            <!-- Worded by js/update.js, which keeps its own two languages. -->
+            <span class="update-main">Ny versjon klar</span>
+            <span class="update-sub">Trykk for å oppdatere</span>
           </button>
           <p id="build" class="build" hidden></p>
         </div>
@@ -117,8 +136,8 @@
            menus, and sixty stops are not a menu. -->
       <section id="screen-trail" class="screen" aria-labelledby="trail-title" hidden>
         <header class="screen-head">
-          <button type="button" id="trail-back" class="btn ghost small" data-autofocus>Back</button>
-          <h2 id="trail-title">The trail</h2>
+          <button type="button" id="trail-back" class="btn ghost small" data-autofocus data-i18n="back">Tilbake</button>
+          <h2 id="trail-title" data-i18n="levels.title">Nivåer</h2>
         </header>
         <div id="trail-map" class="trail-map"></div>
       </section>
@@ -127,34 +146,36 @@
       <section id="screen-free" class="screen" aria-labelledby="free-title" hidden>
         <div class="panel free-panel">
           <div class="free-col free-col-a">
-            <h2 id="free-title">Free roam</h2>
-            <p class="hint">Any board, any time. They never run out.</p>
+            <h2 id="free-title" data-i18n="free.title">Fritt spill</h2>
+            <p class="hint" data-i18n="free.hint">Hvilket brett du vil, når du vil. De tar aldri slutt.</p>
+            <!-- A menu row, so the boards are named plainly by size; Pond,
+                 Meadow and Savanna belong to the trail map. -->
             <div class="row">
-              <span class="label" id="free-size-label">Board</span>
+              <span class="label" id="free-size-label" data-i18n="free.board">Brett</span>
               <div id="free-size" class="seg" role="group" aria-labelledby="free-size-label">
-                <button type="button" data-size="4" aria-pressed="true">Pond <small>4×4</small></button>
-                <button type="button" data-size="6" aria-pressed="false">Meadow <small>6×6</small></button>
-                <button type="button" data-size="9" aria-pressed="false">Savanna <small>9×9</small></button>
+                <button type="button" data-size="4" aria-pressed="true"><span data-i18n="size.4">Lite</span> <small>4×4</small></button>
+                <button type="button" data-size="6" aria-pressed="false"><span data-i18n="size.6">Middels</span> <small>6×6</small></button>
+                <button type="button" data-size="9" aria-pressed="false"><span data-i18n="size.9">Stort</span> <small>9×9</small></button>
               </div>
             </div>
             <div class="row">
-              <span class="label" id="free-skin-label">Show as</span>
+              <span class="label" id="free-skin-label" data-i18n="free.skin">Vis som</span>
               <div id="free-skin" class="seg" role="group" aria-labelledby="free-skin-label">
-                <button type="button" data-skin="animals" aria-pressed="true">Animals</button>
-                <button type="button" data-skin="numbers" aria-pressed="false">Numbers</button>
+                <button type="button" data-skin="animals" aria-pressed="true" data-i18n="skin.animals">Dyr</button>
+                <button type="button" data-skin="numbers" aria-pressed="false" data-i18n="skin.numbers">Tall</button>
               </div>
             </div>
           </div>
           <div class="free-col free-col-b">
             <div class="row">
-              <span class="label" id="free-paws-label">Paws</span>
+              <span class="label" id="free-paws-label" data-i18n="free.paws">Hvor vanskelig</span>
               <!-- Built by js/ui.js: one button per paw tier, like a star
                    rating — tap the third and three paws light up. -->
               <div id="free-paws" class="seg paws" role="group" aria-labelledby="free-paws-label"></div>
             </div>
             <p id="free-paws-note" class="hint paws-note"></p>
-            <button type="button" id="free-go" class="btn primary" data-autofocus>New puzzle</button>
-            <button type="button" id="free-back" class="btn ghost">Back</button>
+            <button type="button" id="free-go" class="btn primary" data-autofocus data-i18n="free.go">Spill</button>
+            <button type="button" id="free-back" class="btn ghost" data-i18n="back">Tilbake</button>
           </div>
         </div>
       </section>
@@ -166,10 +187,10 @@
         reachable mid-puzzle (DESIGN §6). The play head is laid out to leave
         that corner empty, and #play-root gets everything beneath it.
       -->
-      <section id="screen-play" class="screen" aria-label="Puzzle" hidden>
+      <section id="screen-play" class="screen" aria-label="Brett" data-i18n-aria="play.aria" hidden>
         <header class="play-head">
           <p id="play-label" class="play-label"></p>
-          <button type="button" id="tutorial-skip" class="btn ghost small" hidden>Skip</button>
+          <button type="button" id="tutorial-skip" class="btn ghost small" data-i18n="play.skip" hidden>Hopp over</button>
         </header>
         <!-- Handed to mountPlay() (js/play.js, Lane B) empty; everything in it
              is theirs. -->
@@ -179,8 +200,8 @@
              here simply discards the answer when it arrives. -->
         <div id="hatching" class="hatching" role="status" hidden>
           <div class="egg" aria-hidden="true"></div>
-          <p>Hatching a puzzle…</p>
-          <button type="button" id="hatching-back" class="btn ghost small">Back</button>
+          <p>Klekker et brett…</p>
+          <button type="button" id="hatching-back" class="btn ghost small" data-i18n="back">Tilbake</button>
         </div>
       </section>
 
@@ -191,11 +212,11 @@
                time, no stars: the board itself is the trophy. -->
           <div id="win-board" class="win-board" aria-hidden="true"></div>
           <div class="win-words">
-            <h2 id="win-title">Everyone's home!</h2>
+            <h2 id="win-title">Alle er hjemme!</h2>
             <p id="win-sub" class="hint"></p>
             <div class="win-actions">
-              <button type="button" id="win-next" class="btn primary" data-autofocus>Next puzzle</button>
-              <button type="button" id="win-other" class="btn">Trail map</button>
+              <button type="button" id="win-next" class="btn primary" data-autofocus>Neste nivå</button>
+              <button type="button" id="win-other" class="btn">Nivåer</button>
             </div>
           </div>
         </div>
@@ -226,8 +247,10 @@
         type="button"
         id="menu-open"
         class="icon-button"
-        aria-label="Menu"
-        title="Menu (Esc)"
+        aria-label="Meny"
+        title="Meny (Esc)"
+        data-i18n-label="menu"
+        data-i18n-kbd="Esc"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" />
@@ -240,8 +263,8 @@
         id="mute-toggle"
         class="icon-button"
         aria-pressed="false"
-        aria-label="Mute"
-        title="Mute (M)"
+        aria-label="Lyd av"
+        title="Lyd av (M)"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M11 5 6 9H3v6h3l5 4Z" />
@@ -256,8 +279,8 @@
         id="screen-toggle"
         class="icon-button"
         aria-pressed="false"
-        aria-label="Fullscreen"
-        title="Fullscreen"
+        aria-label="Fullskjerm"
+        title="Fullskjerm"
         hidden
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -291,30 +314,69 @@
       hidden
     >
       <div class="menu-col menu-col-a">
-        <p id="menu-kicker" class="kicker">The animals will wait</p>
-        <h2 id="menu-title">Paused</h2>
-        <button type="button" id="menu-resume" class="btn primary">Back to the puzzle</button>
+        <p id="menu-kicker" class="kicker" data-i18n="menu.kicker">Dyrene venter på deg</p>
+        <h2 id="menu-title">Pause</h2>
+        <button type="button" id="menu-resume" class="btn primary" data-i18n="menu.resume">Fortsett</button>
 
         <div class="row" id="menu-skin-row">
-          <span class="label" id="menu-skin-label">Show as</span>
+          <span class="label" id="menu-skin-label" data-i18n="menu.skin">Vis som</span>
           <div id="menu-skin" class="seg" role="group" aria-labelledby="menu-skin-label">
-            <button type="button" data-skin="animals" aria-pressed="true">Animals</button>
-            <button type="button" data-skin="numbers" aria-pressed="false">Numbers</button>
+            <button type="button" data-skin="animals" aria-pressed="true" data-i18n="skin.animals">Dyr</button>
+            <button type="button" data-skin="numbers" aria-pressed="false" data-i18n="skin.numbers">Tall</button>
           </div>
         </div>
 
         <div class="row">
-          <span class="label" id="menu-conflicts-label">Clash marks</span>
+          <span class="label" id="menu-conflicts-label" data-i18n="menu.clashes">Vis feil</span>
           <div id="menu-conflicts" class="seg" role="group" aria-labelledby="menu-conflicts-label">
-            <button type="button" data-on="true" aria-pressed="true">On</button>
-            <button type="button" data-on="false" aria-pressed="false">Off</button>
+            <button type="button" data-on="true" aria-pressed="true" data-i18n="on">På</button>
+            <button type="button" data-on="false" aria-pressed="false" data-i18n="off">Av</button>
+          </div>
+        </div>
+
+        <!--
+          LANGUAGE (hub §2, "Two languages, Norwegian first"). In this panel,
+          which is both the pause and — opened from the title — the settings,
+          so a stranger who cannot read the Norwegian the zoo opened in finds
+          it before a run. Norsk first; each button carries its flag and its
+          endonym in its own language with a lang attribute, and aria-pressed
+          on the chosen one. The flags are kitchens/index.html's, to the path;
+          the Union Jack's clipPath ids are page-global, so they carry a zd-
+          prefix and this is the only copy on the page. Switching is live: the
+          panel stays open and the board stays paused (js/main.js).
+        -->
+        <div class="row">
+          <span class="label" id="menu-lang-label" data-i18n="menu.lang">Språk</span>
+          <div id="menu-lang" class="seg lang" role="group" aria-labelledby="menu-lang-label">
+            <button type="button" data-lang="nb" lang="nb" aria-pressed="true">
+              <svg class="flag" viewBox="0 0 22 16" aria-hidden="true">
+                <rect width="22" height="16" fill="#ba0c2f"/>
+                <path d="M6 0h4v16H6zM0 6h22v4H0z" fill="#fff"/>
+                <path d="M7 0h2v16H7zM0 7h22v2H0z" fill="#00205b"/>
+              </svg>
+              <span>Norsk</span>
+            </button>
+            <button type="button" data-lang="en" lang="en" aria-pressed="false">
+              <svg class="flag" viewBox="0 0 60 30" aria-hidden="true">
+                <clipPath id="zd-uk-clip"><path d="M0 0v30h60V0z"/></clipPath>
+                <clipPath id="zd-uk-diag"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath>
+                <g clip-path="url(#zd-uk-clip)">
+                  <path d="M0 0v30h60V0z" fill="#012169"/>
+                  <path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/>
+                  <path d="M0 0l60 30m0-30L0 30" clip-path="url(#zd-uk-diag)" stroke="#c8102e" stroke-width="4"/>
+                  <path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/>
+                  <path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/>
+                </g>
+              </svg>
+              <span>English</span>
+            </button>
           </div>
         </div>
 
         <!-- The two ways to leave this board, peers and so equal in size. -->
         <div class="pair" id="menu-board-actions">
-          <button type="button" id="menu-restart" class="btn small">Restart puzzle</button>
-          <button type="button" id="menu-leave" class="btn small">Trail map</button>
+          <button type="button" id="menu-restart" class="btn small" data-i18n="menu.restart">Start på nytt</button>
+          <button type="button" id="menu-leave" class="btn small">Nivåer</button>
         </div>
       </div>
 
@@ -322,14 +384,14 @@
         <!-- The two volume rows (hub §2): MUSIC and EFFECTS in every game,
              labelled ranges with an <output> showing the number. -->
         <div class="row">
-          <label class="label" for="music-vol">Music</label>
+          <label class="label" for="music-vol" data-i18n="menu.music">Musikk</label>
           <div class="slider">
             <input type="range" id="music-vol" min="0" max="100" step="1" value="60" />
             <output id="music-vol-out" for="music-vol">60</output>
           </div>
         </div>
         <div class="row">
-          <label class="label" for="sfx-vol">Effects</label>
+          <label class="label" for="sfx-vol" data-i18n="menu.sfx">Effekter</label>
           <div class="slider">
             <input type="range" id="sfx-vol" min="0" max="100" step="1" value="80" />
             <output id="sfx-vol-out" for="sfx-vol">80</output>
@@ -338,17 +400,17 @@
         <!-- Said plainly, because two faders that quietly do nothing are worse
              than none. The levels persist for real, so sound arrives at the
              level its listener already chose. -->
-        <p class="hint" id="menu-sound-hint">The zoo is quiet for now — sound is coming.</p>
+        <p class="hint" id="menu-sound-hint" data-i18n="menu.soundHint">Det er stille i dyrehagen ennå — lyden kommer snart.</p>
 
-        <button type="button" id="menu-exit" class="btn ghost exit" hidden>Back to arcade</button>
-        <button type="button" id="menu-close" class="btn ghost">Back</button>
+        <button type="button" id="menu-exit" class="btn ghost exit" hidden>Tilbake til arkaden</button>
+        <button type="button" id="menu-close" class="btn ghost" data-i18n="back">Tilbake</button>
       </div>
     </section>
 
     <!-- =========================== CONFIRM =========================== -->
     <!-- An in-page question, because confirm() is an OS dialog that belongs
-         to no game and blocks the whole page. Used for "Restart puzzle?" and
-         "Leave your current puzzle?". -->
+         to no game and blocks the whole page. Used for "Start this puzzle
+         over?" and "Leave your current puzzle?", worded by js/main.js. -->
     <section
       id="confirm"
       class="panel confirm-panel"
@@ -361,8 +423,8 @@
       <p id="confirm-text"></p>
       <p id="confirm-note" class="hint"></p>
       <div class="pair">
-        <button type="button" id="confirm-no" class="btn primary">Keep it</button>
-        <button type="button" id="confirm-yes" class="btn">Leave it</button>
+        <button type="button" id="confirm-no" class="btn primary">Behold det</button>
+        <button type="button" id="confirm-yes" class="btn">Gå fra det</button>
       </div>
     </section>
 
@@ -378,6 +440,23 @@
       // Surface load-time failures instead of a silent meadow.
       (function () {
         var bar = document.getElementById("crash");
+        // Its own words: this runs before (and without) js/i18n.js, so it
+        // reads the <html lang> the head script set, at the moment it speaks.
+        var WORDS = {
+          nb: {
+            script: "Et skript ville ikke laste: ",
+            culprit: " (står det js/main.js, kan feilen ligge i en av filene den henter)",
+            broke: "Noe gikk galt: ",
+          },
+          en: {
+            script: "A script failed to load: ",
+            culprit: " (if this is js/main.js, the real culprit may be one of its imports)",
+            broke: "Something broke: ",
+          },
+        };
+        function w() {
+          return WORDS[document.documentElement.lang] || WORDS.nb;
+        }
         function show(msg) {
           bar.textContent = msg;
           bar.hidden = false;
@@ -392,25 +471,18 @@
             if (t && t.tagName === "SCRIPT" && t.dataset && t.dataset.handled)
               return;
             if (t && t.tagName === "SCRIPT") {
-              show(
-                "A script failed to load: " +
-                  t.src +
-                  " (if this is js/main.js, the real culprit may be one of its imports)",
-              );
+              show(w().script + t.src + w().culprit);
               return;
             }
             // Only script loads are captured here as resources; a broken
             // stylesheet or icon is not worth a red bar over the board.
             if (t && t !== window && t.tagName) return;
-            show("Something broke: " + (e.message || e.type));
+            show(w().broke + (e.message || e.type));
           },
           true,
         );
         window.addEventListener("unhandledrejection", function (e) {
-          show(
-            "Something broke: " +
-              (e.reason && e.reason.message ? e.reason.message : e.reason),
-          );
+          show(w().broke + (e.reason && e.reason.message ? e.reason.message : e.reason));
         });
       })();
     </script>
@@ -420,6 +492,9 @@
       fullscreen plate: each its own module graph, loaded BEFORE main.js on
       purpose, so neither dies with a failed import in the game's graph.
     -->
+    <noscript>
+      <p class="noscript">Zoodoku trenger JavaScript for å spille. · Zoodoku needs JavaScript to play.</p>
+    </noscript>
     <script type="module" src="js/update.js"></script>
     <script type="module" src="js/screen.js"></script>
     <script type="module" src="js/main.js"></script>

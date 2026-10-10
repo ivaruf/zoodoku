@@ -120,9 +120,21 @@ T0–T6). Each "New puzzle" is seed `zoodoku-v1-free-<size>-<tier>-<n>` with n
 counted up in storage, so free roam is reproducible too.
 
 ### Words
-Title doors: **"▶ Follow the trail"** (continues at the next unsolved level),
-**"Free roam"**, and *"How to play"* (tutorial). The way out is plain: "Back to
-arcade" (hub rule). Panel back buttons say "Back".
+Two languages, bokmål first (hub §2): every word is in `js/i18n.js`, the
+choice is the hub's `arcade.lang.v1`, and the **Språk / Language** row lives in
+the menu panel — the pause in play, the settings anywhere else, so it is
+reachable from the title before a run. Switching is live.
+
+Menus speak the hub glossary, plainly (2026-10-10, replacing "▶ Follow the
+trail", "Trail map", "Free roam", "Back to the puzzle", "Clash marks"):
+title doors **"▶ Spill / ▶ Play"** (continues at the next unsolved level; "▶
+Fortsett / ▶ Resume" when a board is saved), **"Nivåer / Levels"**, **"Fritt
+spill / Free play"**, *"Slik spiller du / How to play"*. Free play names its
+boards by size (Lite / Middels / Stort); Pond, Meadow and Savanna (Dammen,
+Engen, Savannen) stay on the trail map and in the play label, where they are
+flavour. The way out is "Tilbake til arkaden / Back to arcade"; panel back
+buttons say "Tilbake / Back". The zoo's voice lives in hints, the egg and the
+win card.
 
 ## 3. Look
 

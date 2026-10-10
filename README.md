@@ -20,7 +20,7 @@ python3 -m http.server
 
 then open <http://localhost:8000/zoodoku/>. Serving from the hub root lets
 `../arcade/exit.js` resolve; served on its own the game still runs, just
-without a "Back to arcade" button.
+without a "Tilbake til arkaden" / "Back to arcade" button.
 
 ## Files
 
@@ -29,7 +29,7 @@ which lane owns which file.
 
 | Lane | Files |
 |---|---|
-| Shell & menus | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `sw.js`, `manifest.webmanifest` |
+| Shell & menus | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/i18n.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `sw.js`, `manifest.webmanifest` |
 | Play surface | `js/play.js`, `js/game.js`, `js/board.js`, `js/input.js`, `css/board.css` |
 | Engine | `js/engine.js`, `js/gen-worker.js`, `js/levels.js`, `js/generator.js`, `js/solver.js`, `js/techniques.js`, `js/grader.js`, `js/hints.js`, `js/grid.js`, `js/rng.js`, `tests/`, `tools/bench.mjs` |
 | Art | `js/animals.js`, `tools/make-icons.py`, `icons/` |
@@ -43,6 +43,13 @@ The engine has a committed suite: `node --test tests/*.test.mjs` checks
 uniqueness, seed determinism, tier gating and hints across the trail bands.
 `node tools/bench.mjs` prints generation times per band. Nothing else is
 automated; the rest is playtested by hand.
+
+## Languages
+
+Norsk (bokmål) by default, English one tap away: the Språk / Language row in
+the menu panel, live, no reload. Every word is in `js/i18n.js`; `screen.js`,
+`update.js` and the crash bar keep their own two-language tables because they
+import nothing. The choice is the hub-wide `arcade.lang.v1`.
 
 ## Storage
 

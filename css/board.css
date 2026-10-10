@@ -860,3 +860,27 @@
     transition: none;
   }
 }
+
+/*
+ * Two languages (hub §2): bokmål labels run longer — "Notater", "Visk ut" —
+ * and a sideways phone's tool row lays icon and word side by side, which
+ * leaves ~60px a tool and clips them. When the row is that narrow, stack the
+ * word under a smaller icon instead: the same 40px, and every word whole.
+ * Scoped to landscape, where the row layout lives; portrait already stacks.
+ * Specificity matches .zd-play.is-squeezed .zd-tool and comes later, on purpose.
+ */
+@media (orientation: landscape) {
+  .zd-tools {
+    container-type: inline-size;
+  }
+  @container (max-width: 380px) {
+    .zd-play .zd-tools .zd-tool {
+      flex-direction: column;
+      gap: 1px;
+    }
+    .zd-play .zd-tools .zd-ico {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}

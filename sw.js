@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.1.1'; // iPad: confirm no longer fills the screen; the new-size coach note fades
+const VERSION = 'v0.2.0'; // Norsk first, English one tap away in the menu; menus say plain words
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until
@@ -40,6 +40,7 @@ const ASSETS = [
   './js/store.js',
   './js/screen.js',
   './js/update.js',
+  './js/i18n.js',
   './js/touch-guard.js',
   // Lane B — play surface
   './css/board.css',

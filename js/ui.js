@@ -14,17 +14,28 @@
  * them is safe; everything else that carries text is set with textContent.
  *
  * NAMES. The three board sizes are places on the trail: Pond 4×4, Meadow 6×6,
- * Savanna 9×9 (DESIGN §2). REGION is the one table of those words, so the
- * trail map, the title door, the play label and the win card cannot disagree.
+ * Savanna 9×9 (DESIGN §2) — Dammen, Engen, Savannen in bokmål. REGION is the
+ * one table of sizes and mascots, regionName() the one source of the words,
+ * so the trail map, the play label and the win card cannot disagree. They
+ * are the trail's flavour and stay there: menus name a board by its size.
+ *
+ * WORDS. Every string comes from js/i18n.js through t(), and every painter
+ * here can be called again when the language changes (main.js does, on
+ * `arcade:lang`), so a switch repaints in place: nothing is rebuilt that
+ * would restart an animation or move focus.
  */
 
 import { symbolMarkup } from "./animals.js";
+import { t } from "./i18n.js";
 
 export const REGION = {
-  4: { name: "Pond", size: "4×4", mascot: 3 }, // the whale, for the water
-  6: { name: "Meadow", size: "6×6", mascot: 2 }, // the frog
-  9: { name: "Savanna", size: "9×9", mascot: 4 }, // the lion
+  4: { size: "4×4", mascot: 3 }, // the whale, for the water
+  6: { size: "6×6", mascot: 2 }, // the frog
+  9: { size: "9×9", mascot: 4 }, // the lion
 };
+
+/** "Engen" / "Meadow" — or plain "7×7" for a size the table does not know. */
+export const regionName = (size) => (REGION[size] ? t(`region.${size}`) : `${size}×${size}`);
 
 export const $ = (id) => document.getElementById(id);
 
@@ -135,7 +146,7 @@ const COLS = 5;
  * from the data rather than from hard-coded ranges, so the engine lane can
  * retune the table without this file noticing.
  */
-export function renderTrail({ levels, solved, next, runLevel }, onPick) {
+export function renderTrail({ levels, solved, next, runLevel }, onPick, { keepScroll = false } = {}) {
   const host = $("trail-map");
   host.textContent = "";
   const groups = [];
@@ -146,7 +157,8 @@ export function renderTrail({ levels, solved, next, runLevel }, onPick) {
   }
 
   for (const g of groups) {
-    const reg = REGION[g.size] || { name: `${g.size}×${g.size}`, size: "", mascot: 1 };
+    const reg = REGION[g.size] || { size: "", mascot: 1 };
+    const regName = regionName(g.size);
     const done = g.items.filter((i) => solved[i.level]).length;
     const section = document.createElement("section");
     section.className = `region region-${g.size}`;
@@ -155,13 +167,13 @@ export function renderTrail({ levels, solved, next, runLevel }, onPick) {
     head.className = "region-head";
     head.innerHTML = `<span class="region-mascot" aria-hidden="true">${sym(reg.mascot, "animals")}</span>`;
     const h3 = document.createElement("h3");
-    h3.textContent = `${reg.name} `;
+    h3.textContent = `${regName} `;
     const small = document.createElement("small");
     small.textContent = reg.size;
     h3.append(small);
     const count = document.createElement("span");
     count.className = "region-count";
-    count.textContent = `${done} of ${g.items.length}`;
+    count.textContent = t("regionCount", done, g.items.length);
     head.append(h3, count);
     section.append(head);
 
@@ -205,9 +217,9 @@ export function renderTrail({ levels, solved, next, runLevel }, onPick) {
       btn.innerHTML =
         `<span class="stop-num">${info.level}</span>` +
         (isSolved ? `<span class="stop-tick">${TICK}</span>` : "") +
-        (isHere ? '<span class="stop-tag">your puzzle</span>' : isNext ? '<span class="stop-tag">a little harder</span>' : "");
-      const state = isHere ? ", your puzzle in progress" : isSolved ? ", solved" : isNext ? ", next — a little harder" : "";
-      btn.setAttribute("aria-label", `Level ${info.level}, ${reg.name} ${reg.size}${state}`);
+        (isHere ? `<span class="stop-tag">${t("stop.here")}</span>` : isNext ? `<span class="stop-tag">${t("stop.next")}</span>` : "");
+      const state = isHere ? "here" : isSolved ? "solved" : isNext ? "next" : "";
+      btn.setAttribute("aria-label", t("stopLabel", info.level, `${regName} ${reg.size}`.trim(), state));
       btn.addEventListener("click", () => onPick(info.level));
       grid.append(btn);
     });
@@ -217,7 +229,9 @@ export function renderTrail({ levels, solved, next, runLevel }, onPick) {
   }
 
   // Bring the stop that matters into view: the board you left, else the next
-  // one. "center" so the region header above it is usually visible too.
+  // one. "center" so the region header above it is usually visible too. Not
+  // on a language repaint: the player is looking where they scrolled to.
+  if (keepScroll) return;
   const focus = host.querySelector(".stop.here") || host.querySelector(".stop.next");
   if (focus) {
     requestAnimationFrame(() => {
@@ -256,17 +270,17 @@ export function paintFree({ size, tier, skin }, pawCount, onPaw) {
   const paws = $("free-paws");
   paws.textContent = "";
   paws.style.setProperty("--count", pawCount);
-  for (let t = 0; t < pawCount; t++) {
+  for (let k = 0; k < pawCount; k++) {
     const b = document.createElement("button");
     b.type = "button";
     b.innerHTML = PAW;
-    b.dataset.tier = String(t);
-    b.classList.toggle("lit", t <= tier);
-    b.setAttribute("aria-pressed", String(t === tier));
-    const label = `${t + 1} ${t === 0 ? "paw" : "paws"} of ${pawCount}`;
+    b.dataset.tier = String(k);
+    b.classList.toggle("lit", k <= tier);
+    b.setAttribute("aria-pressed", String(k === tier));
+    const label = t("paws", k + 1, pawCount);
     b.setAttribute("aria-label", label);
     b.title = label;
-    b.addEventListener("click", () => onPaw(t));
+    b.addEventListener("click", () => onPaw(Number(b.dataset.tier)));
     paws.append(b);
   }
   $("free-paws-note").textContent = pawWords(tier, pawCount);
@@ -274,28 +288,29 @@ export function paintFree({ size, tier, skin }, pawCount, onPaw) {
 
 /** One line under the paws, so a child knows what they just picked. */
 function pawWords(tier, count) {
-  const p = `${tier + 1} ${tier === 0 ? "paw" : "paws"} of ${count}`;
-  if (tier === 0) return `${p} — a gentle stroll.`;
-  if (tier === count - 1) return `${p} — the trickiest we have.`;
-  if (tier >= 3) return `${p} — needs notes and a sharp eye.`;
-  return `${p} — a proper puzzle.`;
+  const p = t("paws", tier + 1, count);
+  const what = tier === 0 ? "paws.easy" : tier === count - 1 ? "paws.hardest" : tier >= 3 ? "paws.hard" : "paws.mid";
+  return `${p} — ${t(what)}`;
 }
 
 /* ================================================================== play */
 
+/** `text` may be a function, so a language switch can ask for it again. */
+let playLabel = () => "";
 export function setPlayLabel(text, { tutorial = false } = {}) {
-  $("play-label").textContent = text;
+  playLabel = typeof text === "function" ? text : () => text;
+  $("play-label").textContent = playLabel();
   $("tutorial-skip").hidden = !tutorial;
 }
 
 /** The "hatching a puzzle…" egg. `failed` swaps the words for an apology. */
+let hatchFailed = false;
 export function setHatching(on, failed = false) {
   const el = $("hatching");
   el.hidden = !on;
-  el.classList.toggle("failed", !!failed);
-  el.querySelector("p").textContent = failed
-    ? "That one wouldn't hatch. Try another?"
-    : "Hatching a puzzle…";
+  hatchFailed = !!failed;
+  el.classList.toggle("failed", hatchFailed);
+  el.querySelector("p").textContent = t(hatchFailed ? "hatch.failed" : "hatch.busy");
 }
 
 /* ============================================================== win card */
@@ -305,7 +320,7 @@ export function setHatching(on, failed = false) {
  * (CSS, staggered by --i), a line of words and two doors. No score, no
  * timer, no stars — the full board is the reward (DESIGN §1).
  */
-export function renderWin({ puzzle, skin, title, sub, next, other }) {
+export function renderWin({ puzzle, skin, words }) {
   const N = puzzle.size;
   const { h, w } = puzzle.box;
   const host = $("win-board");
@@ -319,6 +334,16 @@ export function renderWin({ puzzle, skin, title, sub, next, other }) {
     html += `<div class="win-cell${edge}" style="--i:${r + c}">${sym(puzzle.solution[i], skin)}</div>`;
   }
   host.innerHTML = html;
+  winWords = words;
+  paintWinWords();
+}
+
+/** The card's words, kept as a function so a language switch repaints only
+ *  them — re-rendering the board would restart its hop wave. */
+let winWords = null;
+function paintWinWords() {
+  if (!winWords) return;
+  const { title, sub, next, other } = winWords();
   $("win-title").textContent = title;
   $("win-sub").textContent = sub;
   $("win-next").textContent = next;
@@ -335,12 +360,12 @@ export function renderWin({ puzzle, skin, title, sub, next, other }) {
  */
 export function paintMenu({ inPlay, skin, conflicts, leaveLabel }) {
   $("menu-kicker").hidden = !inPlay;
-  $("menu-title").textContent = inPlay ? "Paused" : "Settings";
+  $("menu-title").textContent = t(inPlay ? "menu.paused" : "menu.settings");
   $("menu-resume").hidden = !inPlay;
   $("menu-skin-row").hidden = !inPlay;
   $("menu-board-actions").hidden = !inPlay;
   $("menu-close").hidden = inPlay; // Resume is the way back in play
-  $("menu-leave").textContent = leaveLabel || "Trail map";
+  $("menu-leave").textContent = t(leaveLabel || "door.levels");
   for (const b of $("menu-skin").querySelectorAll("button")) {
     b.setAttribute("aria-pressed", String(b.dataset.skin === skin));
   }
@@ -396,13 +421,23 @@ let confirmResolve = null;
  * The SAFE answer is the primary, focused button: a child mashing Enter keeps
  * their puzzle.
  */
-export function ask({ text, note = "", yes, no }) {
-  if (confirmResolve) confirmResolve(false);
+let confirmWords = null;
+function paintConfirm() {
+  if (!confirmWords) return;
+  const { text, note = "", yes, no } = confirmWords();
   $("confirm-text").textContent = text;
   $("confirm-note").textContent = note;
   $("confirm-note").hidden = !note;
   $("confirm-yes").textContent = yes;
   $("confirm-no").textContent = no;
+}
+
+/** `words` is a function returning { text, note, yes, no }, so an open
+ *  question can be asked again in the other language without closing. */
+export function ask(words) {
+  if (confirmResolve) confirmResolve(false);
+  confirmWords = words;
+  paintConfirm();
   const back = document.activeElement;
   $("confirm").hidden = false;
   document.body.classList.add("confirming");
@@ -410,6 +445,7 @@ export function ask({ text, note = "", yes, no }) {
   return new Promise((resolve) => {
     confirmResolve = (answer) => {
       confirmResolve = null;
+      confirmWords = null;
       $("confirm").hidden = true;
       document.body.classList.remove("confirming");
       if (back && back.isConnected && !back.closest("[hidden]")) {
@@ -438,7 +474,7 @@ export function answerConfirm(answer) {
 export function setMuted(muted) {
   const b = $("mute-toggle");
   b.setAttribute("aria-pressed", String(muted));
-  const label = muted ? "Unmute" : "Mute";
+  const label = t(muted ? "unmute" : "mute");
   b.setAttribute("aria-label", label);
   b.title = `${label} (M)`;
 }
@@ -469,6 +505,25 @@ export function setLevel(kind, v) {
  * outcome when the game is served on its own.
  */
 let exitWired = false;
+let exitApi = null;
+let exitRefused = false;
+
+/** The exit buttons' words. verb() is handed BOTH phrasings in the current
+ *  language and picks the one that is true here; a switch asks again. */
+function paintExit() {
+  if (!exitApi) return;
+  let label;
+  try {
+    label = exitRefused ? t("exit.refused") : exitApi.verb({ arcade: t("exit.arcade"), app: t("exit.close") });
+  } catch {
+    label = t("exit.arcade");
+  }
+  for (const id of ["title-exit", "menu-exit"]) {
+    const el = $(id);
+    if (el && !el.hidden) el.textContent = label;
+  }
+}
+
 export function wireExit() {
   if (exitWired) return true;
   const exit = window.ArcadeExit;
@@ -481,23 +536,40 @@ export function wireExit() {
     show = false;
   }
   if (!show) return true;
-  const label = exit.verb({ arcade: "Back to arcade", app: "Close" });
+  exitApi = exit;
   for (const id of ["title-exit", "menu-exit"]) {
     const el = $(id);
     if (!el) continue;
     el.hidden = false;
-    el.textContent = label;
     el.addEventListener("click", () => {
       Promise.resolve(exit.quit())
         .then((how) => {
           // 'refused': the browser would not close a window it did not open.
           // The game is still running, so say so instead of a dead button.
           if (how !== "refused") return;
-          el.textContent = "Close this window yourself";
-          el.disabled = true;
+          exitRefused = true;
+          for (const other of ["title-exit", "menu-exit"]) if ($(other)) $(other).disabled = true;
+          paintExit();
         })
         .catch(() => {});
     });
   }
+  paintExit();
   return true;
+}
+
+/* ============================================================ language */
+
+/**
+ * Repaint every runtime-drawn word that is on screen now, in the language
+ * js/i18n.js just switched to. paintStatic has already done the [data-i18n]
+ * nodes; main.js repaints what only it can word (the title door, the trail
+ * map, the free picker, the menu face). Nothing here moves focus.
+ */
+export function repaintWords() {
+  $("play-label").textContent = playLabel();
+  $("hatching").querySelector("p").textContent = t(hatchFailed ? "hatch.failed" : "hatch.busy");
+  paintWinWords();
+  paintConfirm();
+  paintExit();
 }

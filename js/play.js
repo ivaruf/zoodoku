@@ -29,8 +29,10 @@
  * Reason (the causes light up and the coach says why), Show me (it is done
  * for you). Unlimited, uncounted, dismissable at every tier, and any move on
  * the board dismisses a hint, because the board it was about has changed.
- * The engine (hints.js) decides *what*; this file decides the words, and
- * builds them from the hint's own fields (unit, digits, placements) rather
+ * The engine (hints.js) decides *what*; this file decides which sentence,
+ * and js/i18n.js holds the sentence itself in both languages (hint1/hint2,
+ * fed one context object from hintCtx below). This file builds that context
+ * from the hint's own fields (unit, digits, placements) rather
  * than trusting a particular `text.args` shape, so a change of args in lane A
  * cannot make the coach talk nonsense.
  *
@@ -61,7 +63,8 @@
 
 import { geometry } from './engine.js';
 import { nextHint } from './hints.js';
-import { symbolMarkup, symbolName } from './animals.js';
+import { symbolMarkup, symbolName, symbolThe, symbolA } from './animals.js';
+import { t } from './i18n.js';
 import { Game } from './game.js';
 import { createBoard } from './board.js';
 import { attachInput } from './input.js';
@@ -149,7 +152,7 @@ export function mountPlay(container, opts) {
     '<p class="zd-coach-text" aria-live="polite"></p>' +
     '<div class="zd-coach-actions">' +
     '<button type="button" class="zd-coach-btn zd-coach-more"></button>' +
-    '<button type="button" class="zd-coach-btn zd-coach-ok">Got it</button>' +
+    '<button type="button" class="zd-coach-btn zd-coach-ok"></button>' +
     '</div>';
   const coachText = coach.querySelector('.zd-coach-text');
   const coachActions = coach.querySelector('.zd-coach-actions');
@@ -177,21 +180,30 @@ export function mountPlay(container, opts) {
   const tools = document.createElement('div');
   tools.className = 'zd-tools';
   tools.setAttribute('role', 'toolbar');
-  tools.setAttribute('aria-label', 'Tools');
-  const tool = (name, label, pressable) => {
+  const tool = (name, pressable) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `zd-tool zd-tool-${name}`;
-    b.innerHTML = `${icon(ICONS[name])}<span class="zd-tool-label">${label}</span>`;
+    b.dataset.tool = name;
+    b.innerHTML = `${icon(ICONS[name])}<span class="zd-tool-label"></span>`;
     if (pressable) b.setAttribute('aria-pressed', 'false');
     tools.appendChild(b);
     return b;
   };
-  const undoBtn = tool('undo', 'Undo');
-  const eraseBtn = tool('erase', 'Erase', true);
-  const notesBtn = notesOffered ? tool('notes', 'Notes', true) : null;
-  const hintBtn = tool('hint', 'Hint');
-  const checkBtn = tool('check', 'Check');
+  const undoBtn = tool('undo');
+  const eraseBtn = tool('erase', true);
+  const notesBtn = notesOffered ? tool('notes', true) : null;
+  const hintBtn = tool('hint');
+  const checkBtn = tool('check');
+
+  /** Every fixed word on the surface, in the current language. Called at
+   *  mount and again on `arcade:lang`; the words that change with the game
+   *  (tray counts, cell labels, the coach) repaint through their own paths. */
+  function paintWords() {
+    tools.setAttribute('aria-label', t('tools'));
+    for (const b of tools.children) b.querySelector('.zd-tool-label').textContent = t(`tool.${b.dataset.tool}`);
+    coachOk.textContent = t('coach.gotIt');
+  }
   tools.dataset.count = tools.children.length;
 
   // The coach lives in a fixed-height slot so a hint appearing never
@@ -219,7 +231,7 @@ export function mountPlay(container, opts) {
   }
 
   function paintTray() {
-    tray.setAttribute('aria-label', skin === 'numbers' ? 'Numbers' : 'Animals');
+    tray.setAttribute('aria-label', t('trayLabel', skin));
     for (let d = 1; d <= N; d++) {
       const b = trayTiles[d];
       const left = game.remaining(d);
@@ -227,7 +239,7 @@ export function mountPlay(container, opts) {
       b.classList.toggle('is-done', left === 0);
       b.classList.toggle('is-picked', picked === d);
       b.setAttribute('aria-pressed', picked === d ? 'true' : 'false');
-      b.setAttribute('aria-label', `${symbolName(d, skin)}, ${left ? `${left} left` : 'all placed'}`);
+      b.setAttribute('aria-label', t('trayTile', symbolName(d, skin), left));
     }
   }
 
@@ -492,22 +504,31 @@ export function mountPlay(container, opts) {
   /** Check: mark wrong entries once; they fade on their own (DESIGN §1). */
   function check() {
     dismissHint();
-    if (!game.hasEntries()) return say('Nothing to check yet — put some pieces down first.');
+    if (!game.hasEntries()) return say(() => t('check.nothing'));
     const wrong = game.wrongCells();
     if (wrong.length) {
       board.flashWrong(wrong);
       sfx('wiggle');
-      say(wrong.length === 1 ? 'One piece doesn’t belong — it’s marked.' : `${wrong.length} pieces don’t belong — they’re marked.`);
+      say(() => t('checkWrong', wrong.length));
     } else {
-      say('Everything so far fits.');
+      say(() => t('check.fine'));
     }
   }
 
   // ---- coach ----------------------------------------------------------------------------------
 
+  /*
+   * EVERY COACH LINE IS A FUNCTION, not a string: () => t(...). The coach
+   * keeps the last pair it was handed and calls them again on `arcade:lang`,
+   * so a hint half-read in Norwegian finishes in English the moment the
+   * player switches — same hint, same tier, nothing recomputed. opts.coach
+   * may be either (the shell passes a function for the same reason).
+   */
+  const line = (x) => (typeof x === 'function' ? x : () => x || '');
   /** The line the coach goes back to when a hint or a remark is done. */
-  const standing = opts.coachFades ? '' : opts.coach || '';
+  const standing = line(opts.coachFades ? '' : opts.coach);
   let sayTimer = 0;
+  let coachNow = { text: standing, more: null };
   /** A short coach line with no buttons, which goes away by itself. */
   function say(text, ms = 3200) {
     showCoach(text, null);
@@ -518,6 +539,13 @@ export function mountPlay(container, opts) {
   }
 
   function showCoach(text, more) {
+    coachNow = { text: line(text), more: more ? line(more) : null };
+    paintCoach();
+  }
+
+  function paintCoach() {
+    const text = coachNow.text();
+    const more = coachNow.more ? coachNow.more() : '';
     coachText.textContent = text;
     coach.classList.toggle('is-empty', !text);
     coach.classList.toggle('is-hint', !!hint);
@@ -555,7 +583,7 @@ export function mountPlay(container, opts) {
     if (!hint || tier >= 3) {
       hint = computeHint();
       tier = 1;
-      if (!hint) return say('Nothing left to find!');
+      if (!hint) return say(() => t('hint.none'));
     } else tier++;
     sfx('hint');
     showHintTier();
@@ -569,20 +597,15 @@ export function mountPlay(container, opts) {
     showCoach(standing, null);
   }
 
-  const name = (d) => symbolName(d, skin);
-  const the = (d) => `the ${name(d)}`;
-  const a = (d) => `${/^[aeiou8]/i.test(name(d)) ? 'an' : 'a'} ${name(d)}`;
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   // Unit types from techniques.js: the three real units, plus 'cell' (a
   // naked single) and 'group' (fish and wings), which have no one word.
-  const UNIT_WORD = { row: 'row', col: 'column', box: 'box', cell: 'square', group: 'pattern' };
-  const listOf = (ds) => (ds.length < 2 ? ds.map(a).join('') : `${ds.slice(0, -1).map(a).join(', ')} and ${a(ds[ds.length - 1])}`);
+  const UNIT_TYPES = ['row', 'col', 'box', 'cell', 'group'];
 
-  /** 'row' if all cells share a row, 'column' if a column, else null. */
+  /** 'row' if all cells share a row, 'col' if a column, else null. */
   function lineOf(cells) {
     if (!cells || cells.length < 2) return null;
     if (cells.every((c) => board.rowOf(c) === board.rowOf(cells[0]))) return 'row';
-    if (cells.every((c) => board.colOf(c) === board.colOf(cells[0]))) return 'column';
+    if (cells.every((c) => board.colOf(c) === board.colOf(cells[0]))) return 'col';
     return null;
   }
 
@@ -598,75 +621,38 @@ export function mountPlay(container, opts) {
     return ds;
   }
 
-  /** The coach's words for hint h at tier t (1 nudge, 2 reason). */
-  function words(h, t) {
-    if (h.kind === 'wrong') {
-      if (t === 1) return 'Something here doesn’t fit.';
-      return h.cells.length === 1 ? 'This one doesn’t belong.' : 'These don’t belong.';
-    }
-    if (h.kind === 'reveal') {
-      return t === 1 ? 'Look at this square.' : 'Its row, column and box leave just one piece that fits.';
-    }
-    const key = (h.text && h.text.key) || h.technique || '';
+  /**
+   * What a hint sentence needs, as TYPES and finished noun phrases — never
+   * a sentence. js/i18n.js does the grammar: English says "the fox", bokmål
+   * "reven"; English "this row", bokmål "denne raden". Read at paint time,
+   * so a skin or language switch mid-hint changes the words and not the hint.
+   */
+  function hintCtx(h) {
     const ds = hintDigits(h);
     const d = ds[0] || 0;
-    const ut = h.unit && UNIT_WORD[h.unit.type];
-    const unit = ut || 'area';
     const args = (h.text && h.text.args) || {};
-    const lineType = args.lineType || (h.unit && h.unit.type);
-    const twoLines = lineType === 'col' ? 'columns' : 'rows';
-    const crossLines = twoLines === 'rows' ? 'columns' : 'rows';
-    if (t === 1) {
-      switch (key) {
-        case 'hidden_single_box':
-          return `Look at this box. Where can ${the(d)} go?`;
-        case 'hidden_single_line':
-          return `Look at this ${unit}. Where can ${the(d)} go?`;
-        case 'naked_single':
-        case 'reveal':
-          return 'Look at this square.';
-        case 'x_wing':
-          return `Look at ${the(d)} in these two ${twoLines}.`;
-        case 'swordfish':
-          return `Look at ${the(d)} in these three ${twoLines}.`;
-        case 'xy_wing':
-          return 'Look at these three squares.';
-        default:
-          return `Look at this ${unit}.`;
-      }
-    }
-    const line = UNIT_WORD[args.lineType] || lineOf(h.patternCells) || lineOf(h.focusCells) || 'line';
-    switch (key) {
-      case 'full_house':
-        return `Only one square is left in this ${unit} — and only ${a(d)} is missing.`;
-      case 'hidden_single_box':
-      case 'hidden_single_line':
-        return `Every other square here is blocked for ${the(d)} — by these.`;
-      case 'naked_single':
-        return `Its row, column and box already have everything else. Only ${a(d)} fits.`;
-      case 'reveal':
-        return `This square has the fewest choices. It needs ${a(d)}.`;
-      case 'pointing':
-        return `In this box, ${the(d)} can only go along one ${line} — so the rest of that ${line} can’t have it.`;
-      case 'claiming':
-        return `In this ${unit}, ${the(d)} only fits inside one box — so the rest of that box can’t have it.`;
-      case 'naked_pair':
-        return `These two squares can only be ${listOf(ds.slice(0, 2)).replace(' and ', ' or ')} — so nothing else in this ${unit} can be either.`;
-      case 'hidden_pair':
-        return `${cap(listOf(ds.slice(0, 2)))} can only go in these two squares — so those squares can’t hold anything else.`;
-      case 'naked_triple':
-        return `These three squares share just ${listOf(ds.slice(0, 3))} — so nothing else in this ${unit} can be those.`;
-      case 'hidden_triple':
-        return `${cap(listOf(ds.slice(0, 3)))} only fit in these three squares — so those squares hold nothing else.`;
-      case 'x_wing':
-        return `In both ${twoLines}, ${the(d)} has just two spots, and they line up — so it can’t go anywhere else in those ${crossLines}.`;
-      case 'swordfish':
-        return `In these three ${twoLines}, ${the(d)} only fits in the same three ${crossLines} — so nowhere else in those ${crossLines}.`;
-      case 'xy_wing':
-        return `However these three squares turn out, one of the ends is ${a(d)} — so a square that sees both ends can’t be ${a(d)}.`;
-      default:
-        return d ? `There is only one place ${the(d)} can go.` : 'There is only one way this can go.';
-    }
+    const ut = h.unit && h.unit.type;
+    const lineType = args.lineType || ut;
+    const lines = lineType === 'col' ? 'cols' : 'rows';
+    const lt = args.lineType === 'row' || args.lineType === 'col' ? args.lineType : null;
+    return {
+      d,
+      the: d ? symbolThe(d, skin) : '',
+      a: d ? symbolA(d, skin) : '',
+      as: ds.map((x) => symbolA(x, skin)),
+      unit: UNIT_TYPES.includes(ut) ? ut : 'area',
+      line: lt || lineOf(h.patternCells) || lineOf(h.focusCells) || 'line',
+      lines,
+      cross: lines === 'rows' ? 'cols' : 'rows',
+    };
+  }
+
+  /** The coach's words for hint h at tier tr (1 nudge, 2 reason). */
+  function words(h, tr) {
+    if (h.kind === 'wrong') return tr === 1 ? t('hint.wrong1') : t('hintWrong2', h.cells.length);
+    if (h.kind === 'reveal') return tr === 1 ? t('hint.look') : t('hint.revealWhy');
+    const key = (h.text && h.text.key) || h.technique || '';
+    return t(tr === 1 ? 'hint1' : 'hint2', key, hintCtx(h));
   }
 
   function showHintTier() {
@@ -674,37 +660,39 @@ export function mountPlay(container, opts) {
     if (h.kind === 'wrong') {
       if (tier === 1) {
         board.clearHint();
-        showCoach(words(h, 1), 'Which one?');
+        showCoach(() => words(h, 1), () => t('coach.which'));
       } else if (tier === 2) {
         board.setHint({ focus: h.cells });
         board.flashWrong(h.cells, 6000);
-        showCoach(words(h, 2), h.cells.length === 1 ? 'Take it off' : 'Take them off');
+        showCoach(() => words(h, 2), () => t('takeOff', h.cells.length));
       } else {
         afterMove(game.clearMany(h.cells), { keepHint: true });
-        finishHint('Gone. Carry on from here.');
+        finishHint(() => t('hint.gone'));
       }
       return;
     }
     if (h.kind === 'reveal') {
       if (tier < 3) {
         board.setHint({ focus: [h.cell] });
-        showCoach(words(h, tier), tier === 1 ? 'Tell me more' : 'Show me');
+        const tr = tier;
+        showCoach(() => words(h, tr), () => t(tr === 1 ? 'coach.more' : 'coach.show'));
       } else {
-        afterMove(game.place(h.cell, game.solution[h.cell]), { keepHint: true });
-        finishHint(`There — ${a(game.solution[h.cell])}.`);
+        const d = game.solution[h.cell];
+        afterMove(game.place(h.cell, d), { keepHint: true });
+        finishHint(() => t('hintThere', symbolA(d, skin)));
       }
       return;
     }
     const unitCells = (h.unit && h.unit.cells) || [];
     if (tier === 1) {
       board.setHint({ unit: unitCells.length ? unitCells : h.patternCells || [], focus: unitCells.length ? [] : h.focusCells || [] });
-      showCoach(words(h, 1), 'Tell me more');
+      showCoach(() => words(h, 1), () => t('coach.more'));
     } else if (tier === 2) {
       // Focus is only where the answer lands: patternCells for a single is
       // the whole unit, which is already glowing, and ringing all of it
       // would drown the one square that matters.
       board.setHint({ unit: unitCells, cause: h.causeCells || [], focus: h.focusCells || [] });
-      showCoach(words(h, 2), 'Show me');
+      showCoach(() => words(h, 2), () => t('coach.show'));
     } else {
       showMe(h);
     }
@@ -715,26 +703,28 @@ export function mountPlay(container, opts) {
     if (placements.length) {
       afterMove(game.placeMany(placements), { keepHint: true });
       const d = placements[0].digit;
-      return finishHint(placements.length === 1 ? `In goes ${the(d)}.` : 'In they go.');
+      return finishHint(() => (placements.length === 1 ? t('hintInGoes', symbolThe(d, skin)) : t('hint.inTheyGo')));
     }
     const elims = h.eliminations || [];
     if (notesOffered && elims.some(({ cell, digit }) => game.notes[cell] & (1 << digit))) {
       afterMove(game.removeNotes(elims), { keepHint: true, quiet: true });
-      return finishHint('Those marks can come off your notes.');
+      return finishHint(() => t('hint.notesOff'));
     }
     // Nothing pencilled to remove: place what the step leads to (see the
     // purpose block, "SHOW ME ON A STEP THAT ONLY ELIMINATES"). hints.js
     // works that out as `then`; the pool below is only a fallback.
     if (h.then && !game.entries[h.then.cell] && !game.isGiven(h.then.cell)) {
-      afterMove(game.place(h.then.cell, h.then.digit), { keepHint: true });
-      return finishHint(`That leads here — ${a(h.then.digit)}.`);
+      const d = h.then.digit;
+      afterMove(game.place(h.then.cell, d), { keepHint: true });
+      return finishHint(() => t('hintLeads', symbolA(d, skin)));
     }
     const pool = elims.map((x) => x.cell).concat(h.focusCells || [], (h.unit && h.unit.cells) || []);
     let cell = pool.find((i) => !game.entries[i]);
     if (cell === undefined) for (let i = 0; i < total && cell === undefined; i++) if (!game.entries[i]) cell = i;
     if (cell === undefined) return dismissHint();
-    afterMove(game.place(cell, game.solution[cell]), { keepHint: true });
-    finishHint(`That leads here — ${a(game.solution[cell])}.`);
+    const d = game.solution[cell];
+    afterMove(game.place(cell, d), { keepHint: true });
+    finishHint(() => t('hintLeads', symbolA(d, skin)));
   }
 
   /** Tier 3 is done: say so, keep "Got it", and let the next Hint press
@@ -847,14 +837,31 @@ export function mountPlay(container, opts) {
 
   // ---- first paint --------------------------------------------------------------------------------
 
+  paintWords();
   paintTrayArt();
   renderAll();
   // A tutorial coach stands for the whole board; a "bigger boxes now" note
   // (opts.coachFades) says its piece once and goes, or it would sit above
   // the tray for every move of a 9×9.
-  if (opts.coachFades && opts.coach) say(opts.coach, 8000);
+  if (opts.coachFades && opts.coach) say(line(opts.coach), 8000);
   else showCoach(standing, null);
   layout();
+
+  /*
+   * A language switch (js/i18n.js, `arcade:lang`), live: the fixed words,
+   * the board's and tray's labels, and whatever the coach is saying right
+   * now — in place, without touching the game, the hint tier or a pause.
+   * Norwegian words run longer, so the layout is measured again too.
+   */
+  function onLang() {
+    if (destroyed) return;
+    paintWords();
+    board.relabel();
+    renderAll();
+    paintCoach();
+    if (!rafLayout) rafLayout = requestAnimationFrame(layout);
+  }
+  document.addEventListener('arcade:lang', onLang);
 
   // ---- the handle --------------------------------------------------------------------------------------
 
@@ -902,6 +909,7 @@ export function mountPlay(container, opts) {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      document.removeEventListener('arcade:lang', onLang);
       clearTimeout(sayTimer);
       if (rafLayout) cancelAnimationFrame(rafLayout);
       ro.disconnect();

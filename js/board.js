@@ -41,6 +41,7 @@
  */
 
 import { symbolMarkup, symbolName } from './animals.js';
+import { t } from './i18n.js';
 
 /** Classes that only ever live for one CSS animation. */
 const TRANSIENT = ['hop', 'wiggle', 'pop'];
@@ -57,7 +58,7 @@ export function createBoard(geo, { skin = 'animals', emphasis = null } = {}) {
   const el = document.createElement('div');
   el.className = 'zd-board';
   el.setAttribute('role', 'grid');
-  el.setAttribute('aria-label', `Puzzle board, ${N} by ${N}`);
+  el.setAttribute('aria-label', t('boardLabel', N));
   el.style.setProperty('--n', N);
   el.dataset.size = N;
 
@@ -176,17 +177,17 @@ export function createBoard(geo, { skin = 'animals', emphasis = null } = {}) {
   }
 
   function labelFor(i, d, given, notes, clash) {
-    let s = `Row ${rowOf(i) + 1}, column ${colOf(i) + 1}: `;
+    let s = t('cellLabel', rowOf(i) + 1, colOf(i) + 1);
     if (d) {
       s += symbolName(d, curSkin);
-      if (given) s += ', given';
-      else if (clash) s += ', clashes';
+      if (given) s += t('cell.given');
+      else if (clash) s += t('cell.clash');
     } else {
-      s += 'empty';
+      s += t('cell.empty');
       if (notes) {
         const names = [];
         for (let k = 1; k <= N; k++) if (notes & (1 << k)) names.push(symbolName(k, curSkin));
-        s += `, notes: ${names.join(', ')}`;
+        s += t('cellNotes', names);
       }
     }
     return s;
@@ -209,6 +210,13 @@ export function createBoard(geo, { skin = 'animals', emphasis = null } = {}) {
     }
   }
   el.dataset.skin = curSkin;
+
+  /** The language changed (js/i18n.js): the board's own name now; the cell
+   *  labels follow on the caller's next renderCell pass, because labelFor
+   *  builds a different string and the shownLabel cache sees the change. */
+  function relabel() {
+    el.setAttribute('aria-label', t('boardLabel', N));
+  }
 
   // ---- highlights ---------------------------------------------------------------
 
@@ -385,6 +393,7 @@ export function createBoard(geo, { skin = 'animals', emphasis = null } = {}) {
     cells,
     renderCell,
     setSkin,
+    relabel,
     setSelected,
     setFocusDigit,
     setConflicts,

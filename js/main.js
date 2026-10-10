@@ -14,7 +14,14 @@
  * cannot swap it (hub §1), and the only ways to throw it away are an explicit
  * in-page "Leave it" or solving it. Leaving to the trail map, quitting to the
  * arcade, closing the tab — all of those keep it, and the title's first door
- * then reads "▶ Back to your puzzle".
+ * then reads "▶ Fortsett" / "▶ Resume".
+ *
+ * TWO LANGUAGES (js/i18n.js). Every word here goes through t(), and anything
+ * worded at runtime is kept as a function — () => t(...) — wherever it has to
+ * be asked for again: the play label, the win card, an open question, the
+ * coach. The language row in the menu calls setLang(); `arcade:lang` then
+ * lands in onLang() below, which repaints what is on screen in place. No
+ * reload, no restart, no unpause — the menu stays open with focus where it was.
  *
  * ONE RUN AT A TIME. There is one run slot, so starting a different board
  * while one is saved asks first ("Leave your current puzzle?"). Tutorial
@@ -34,8 +41,9 @@ import { levelInfo, LEVEL_COUNT, TUTORIAL, FREE_TIERS } from "./levels.js";
 import { mountPlay } from "./play.js";
 import * as store from "./store.js";
 import * as ui from "./ui.js";
+import { t, setLang, paintStatic } from "./i18n.js";
 
-const { $, REGION } = ui;
+const { $, REGION, regionName } = ui;
 
 /* ================================================================ state */
 
@@ -76,18 +84,21 @@ function nextUnsolved(from = 0) {
   return null;
 }
 
-const regionOf = (size) => REGION[size] || { name: `${size}×${size}`, size: "" };
-const pawsText = (tier) => `${tier + 1} ${tier === 0 ? "paw" : "paws"}`;
+const sizeText = (size) => (REGION[size] ? REGION[size].size : `${size}×${size}`);
 
-/** "Level 12 · Meadow 6×6" / "Free roam · Savanna · 3 paws" — one wording everywhere. */
+/**
+ * "Nivå 12 · Engen 6×6" / "Fritt spill · 9×9 · 3 poter" — one wording
+ * everywhere, in the current language. Free play is named by its size alone:
+ * the region names are the trail's, and its picker says "Stort 9×9".
+ */
 function describe(spec, { long = true } = {}) {
   if (spec.kind === "trail") {
     const info = LEVELS[spec.level - 1];
-    const reg = regionOf(info ? info.size : 4);
-    return `Level ${spec.level} · ${reg.name}${long ? ` ${reg.size}` : ""}`;
+    const size = info ? info.size : 4;
+    return t("describeLevel", spec.level, regionName(size), long ? sizeText(size) : "");
   }
-  if (spec.kind === "free") return `Free roam · ${regionOf(spec.size).name} · ${pawsText(spec.tier)}`;
-  return `How to play · ${spec.index + 1} of ${TUTORIAL.length}`;
+  if (spec.kind === "free") return t("describeFree", sizeText(spec.size), t("paws", spec.tier + 1));
+  return t("describeTutorial", spec.index + 1, TUTORIAL.length);
 }
 
 function sameSpec(a, b) {
@@ -108,7 +119,8 @@ function coachFor(level) {
   if (!info || info.size === 4) return null;
   const anySolved = LEVELS.some((i) => i.size === info.size && progress.solved[i.level]);
   if (anySolved) return null;
-  return info.size === 6 ? "Bigger boxes now: 2 tall and 3 wide." : "Numbers now — and notes, for keeping track.";
+  const key = info.size === 6 ? "coach.size6" : "coach.size9";
+  return () => t(key);
 }
 
 /* ================================================================ title */
@@ -116,12 +128,12 @@ function coachFor(level) {
 function paintTitle() {
   let primary;
   if (run) {
-    primary = { main: "▶ Back to your puzzle", sub: describe(run.spec) };
+    primary = { main: t("door.resume"), sub: describe(run.spec) };
   } else {
     const n = nextUnsolved();
     primary = n
-      ? { main: "▶ Follow the trail", sub: describe({ kind: "trail", level: n }) }
-      : { main: "▶ Follow the trail", sub: "Every stop solved — pick any" };
+      ? { main: t("door.play"), sub: describe({ kind: "trail", level: n }) }
+      : { main: t("door.play"), sub: t("door.allSolved") };
   }
   const newHere = !progress.tutorialDone && Object.keys(progress.solved).length === 0;
   ui.paintTitle({ primary, newHere });
@@ -137,6 +149,11 @@ function showTitle() {
 
 function showTrail() {
   leaveBoard();
+  renderTrail();
+  ui.showScreen("trail");
+}
+
+function renderTrail(opts) {
   ui.renderTrail(
     {
       levels: LEVELS,
@@ -145,8 +162,8 @@ function showTrail() {
       runLevel: run && run.spec.kind === "trail" ? run.spec.level : null,
     },
     (level) => startPuzzle({ kind: "trail", level }),
+    opts,
   );
-  ui.showScreen("trail");
 }
 
 /* ============================================================ free roam */
@@ -182,12 +199,13 @@ async function newFreePuzzle() {
  */
 async function mayLeaveRun(spec) {
   if (!run || (spec && sameSpec(run.spec, spec))) return true;
-  const ok = await ui.ask({
-    text: "Leave your current puzzle?",
-    note: `${describe(run.spec)} is still waiting. Leaving it starts that one fresh next time.`,
-    yes: "Leave it",
-    no: "Keep it",
-  });
+  const waiting = run.spec;
+  const ok = await ui.ask(() => ({
+    text: t("ask.leave"),
+    note: t("askLeaveNote", describe(waiting)),
+    yes: t("ask.leaveYes"),
+    no: t("ask.keep"),
+  }));
   if (!ok) return false;
   store.clearRun();
   run = null;
@@ -207,7 +225,8 @@ async function startPuzzle(spec) {
 /** Mount the saved run exactly as it was left. No engine call: the puzzle is in storage. */
 function resumeRun() {
   if (!run) return;
-  ui.setPlayLabel(describe(run.spec, { long: false }));
+  const spec = run.spec;
+  ui.setPlayLabel(() => describe(spec, { long: false }));
   ui.setHatching(false);
   ui.showScreen("play");
   mount(run.spec, run.puzzle, run.skin, run.play, {});
@@ -222,7 +241,7 @@ async function begin(spec, from) {
   leaveBoard();
   cameFrom = from;
   const ticket = ++loadTicket;
-  ui.setPlayLabel(describe(spec, { long: false }));
+  ui.setPlayLabel(() => describe(spec, { long: false }));
   ui.setHatching(false);
   ui.showScreen("play");
   const eggTimer = setTimeout(() => {
@@ -251,22 +270,24 @@ function beginTutorial(index) {
   leaveBoard();
   loadTicket++;
   cameFrom = "title";
-  const t = TUTORIAL[index];
+  const lesson = TUTORIAL[index];
   const puzzle = {
     id: `zoodoku-tutorial-${index + 1}`,
-    size: t.size,
+    size: lesson.size,
     box: { h: 2, w: 2 },
-    givens: t.givens.slice(),
-    solution: t.solution.slice(),
+    givens: lesson.givens.slice(),
+    solution: lesson.solution.slice(),
     tier: 0,
     notes: false,
   };
-  ui.setPlayLabel(describe({ kind: "tutorial", index }), { tutorial: true });
+  ui.setPlayLabel(() => describe({ kind: "tutorial", index }), { tutorial: true });
   ui.setHatching(false);
   ui.showScreen("play");
   mount({ kind: "tutorial", index }, puzzle, "animals", null, {
-    emphasis: t.rule || null,
-    coach: t.coach || null,
+    emphasis: lesson.rule || null,
+    // The words come from js/i18n.js ("tut.coach.<index>"), not from the
+    // English `coach` line in levels.js, which stays as the engine's record.
+    coach: () => t(`tut.coach.${index}`),
   });
 }
 
@@ -353,14 +374,16 @@ function solved(spec) {
       progress.tutorialDone = true;
       store.saveProgress(progress);
     }
-    const words = ["Rows: one of each.", "Columns too.", "And boxes. That's all of sudoku."];
+    const i = spec.index;
     showWin({
       puzzle,
       skin,
-      title: last ? "You know the rules!" : "Got it!",
-      sub: words[spec.index] || "",
-      next: last ? "▶ Follow the trail" : "Next lesson",
-      other: last ? "Title" : "Skip the rest",
+      words: () => ({
+        title: t(last ? "tut.done" : "tut.gotIt"),
+        sub: i < TUTORIAL.length ? t(`tut.win.${i}`) : "",
+        next: t(last ? "door.play" : "tut.next"),
+        other: t(last ? "back" : "tut.skipRest"),
+      }),
       onNext: () => (last ? followTrail() : beginTutorial(spec.index + 1)),
       onOther: () => {
         progress.tutorialDone = true;
@@ -381,10 +404,12 @@ function solved(spec) {
     showWin({
       puzzle,
       skin,
-      title: skin === "numbers" ? "Every number home!" : "Everyone's home!",
-      sub: describe(spec),
-      next: next ? "Next puzzle" : "Free roam",
-      other: "Trail map",
+      words: () => ({
+        title: t(skin === "numbers" ? "win.numbers" : "win.animals"),
+        sub: describe(spec),
+        next: t(next ? "win.nextLevel" : "door.free"),
+        other: t("door.levels"),
+      }),
       onNext: () => (next ? begin({ kind: "trail", level: next }, "trail") : showFree()),
       onOther: showTrail,
     });
@@ -394,10 +419,12 @@ function solved(spec) {
   showWin({
     puzzle,
     skin,
-    title: skin === "numbers" ? "Every number home!" : "Everyone's home!",
-    sub: describe(spec),
-    next: "Next puzzle",
-    other: "Free roam",
+    words: () => ({
+      title: t(skin === "numbers" ? "win.numbers" : "win.animals"),
+      sub: describe(spec),
+      next: t("win.newBoard"),
+      other: t("door.free"),
+    }),
     onNext: newFreePuzzle,
     onOther: showFree,
   });
@@ -439,14 +466,19 @@ function openMenu() {
       /* a board that cannot pause still gets a menu */
     }
   }
+  paintMenu();
+  ui.showMenu();
+}
+
+/** The menu's face from the state it was opened over; again on a language switch. */
+function paintMenu() {
   const kind = current && current.spec.kind;
   ui.paintMenu({
     inPlay: pausedBoard,
     skin: current ? current.skin : "animals",
     conflicts: settings.conflicts,
-    leaveLabel: kind === "free" ? "Free roam" : kind === "tutorial" ? "Skip lessons" : "Trail map",
+    leaveLabel: kind === "free" ? "door.free" : kind === "tutorial" ? "menu.skip" : "door.levels",
   });
-  ui.showMenu();
 }
 
 function closeMenu() {
@@ -544,12 +576,12 @@ $("menu-conflicts").addEventListener("click", (e) => {
 });
 on("menu-restart", async () => {
   if (!handle) return;
-  const ok = await ui.ask({
-    text: "Start this puzzle over?",
-    note: "Everything you placed goes back to the tray.",
-    yes: "Start over",
-    no: "Keep going",
-  });
+  const ok = await ui.ask(() => ({
+    text: t("ask.restart"),
+    note: t("ask.restartNote"),
+    yes: t("ask.restartYes"),
+    no: t("ask.restartNo"),
+  }));
   if (!ok || !handle) return;
   handle.restart();
   persist();
@@ -564,6 +596,13 @@ on("menu-leave", () => {
     store.saveProgress(progress);
     showTitle();
   } else showTrail();
+});
+
+// Language: the row in the menu panel. Live — the menu stays open, the
+// board stays paused exactly as it was, and focus stays on the pressed flag.
+$("menu-lang").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-lang]");
+  if (b) setLang(b.dataset.lang);
 });
 
 // The in-page confirm.
@@ -623,8 +662,8 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    const t = e.target;
-    if (t && t.closest && t.closest("input:not([type=range]), textarea, [contenteditable='true']")) return;
+    const target = e.target;
+    if (target && target.closest && target.closest("input:not([type=range]), textarea, [contenteditable='true']")) return;
     setMuted(!muted);
   }
 });
@@ -643,8 +682,31 @@ function trapTab(dialog, e) {
   }
 }
 
+/* ============================================================= language */
+
+/*
+ * `arcade:lang` (js/i18n.js has already repainted every [data-i18n] node and
+ * set <html lang>). Repaint what is worded at runtime, for every screen —
+ * a hidden screen costs nothing and is then right when it is shown. The
+ * board's own words (tools, coach, labels) repaint inside js/play.js, which
+ * listens for the same event.
+ */
+function onLang() {
+  paintTitle();
+  if (ui.screenNow() === "trail") renderTrail({ keepScroll: true });
+  paintFree();
+  if (ui.menuOpen()) paintMenu();
+  ui.setMuted(muted);
+  ui.repaintWords();
+}
+document.addEventListener("arcade:lang", onLang);
+
 /* ================================================================= boot */
 
+// The static page is written in Norwegian, the default; paint it once in
+// whatever language is stored (a no-op in bokmål, English for anyone who
+// chose it) before the first screen is shown.
+paintStatic(document);
 ui.drawTitleScene();
 paintTitle();
 ui.showScreen("title");
