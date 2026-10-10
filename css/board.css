@@ -1,0 +1,862 @@
+/*
+ * board.css — the play surface: the board, the pieces, the tray, the
+ * toolbar and the coach. Lane B's (DESIGN.md §4).
+ *
+ * It only *uses* the :root tokens style.css declares (DESIGN §3) and never
+ * redeclares them; the few colours it mixes are mixes of those tokens, so a
+ * palette change in style.css reaches the board too.
+ *
+ * THE FEEL is a wooden-and-paper board game, not a spreadsheet: the board is
+ * a cream tray with a thick ink rim sitting on a darker lip; givens are flat
+ * tiles printed onto it (`--given`); a player's pieces are raised chunky
+ * tiles with a hard bottom shadow, like something you could pick up — which
+ * you can. Box lines are thick ink, cell lines are just the gaps between
+ * cells.
+ *
+ * SIZING comes from js/play.js, which measures the container and writes
+ * --board-px, --cell-px, --pad, --corner-top and --tray-cols on .zd-play,
+ * plus data-mode="tall" (controls below) or "wide" (controls beside). Every
+ * size inside the board is a fraction of --cell-px, so a 4×4 on a tablet
+ * and a 9×9 on a phone are the same drawing at different scales.
+ *
+ * ANIMATION is CSS only: classes added by board.js and removed on
+ * `animationend`. All of it stops under prefers-reduced-motion.
+ */
+
+/* ============================================================ the surface */
+
+.zd-play {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--pad, 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pad, 12px);
+  /* A safety net on very short viewports, not a plan: play.js sizes the
+     board so nothing needs to scroll (hub §2). */
+  overflow: auto;
+  font-family: var(--font);
+  color: var(--ink);
+  /* A drag here is a piece on its way somewhere, never a scroll or a zoom. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.zd-play[data-mode='wide'] {
+  flex-direction: row;
+}
+
+.zd-stage {
+  flex: none;
+  /* Room for the board's rim (3px all round) and lip (below), which are
+     box-shadows and so take no space of their own; play.js's RIM_X/RIM_Y. */
+  padding: calc(3px + var(--corner-top, 0px)) 3px 11px;
+  display: grid;
+  place-items: center;
+}
+.zd-play[data-mode='wide'] .zd-stage {
+  padding-top: 3px;
+}
+
+.zd-side {
+  flex: none;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.zd-play[data-mode='wide'] .zd-side {
+  align-self: stretch;
+  justify-content: center;
+  /* Only the right-hand column sits under the shell's corner, so only it
+     steps down past it (the same move style.css's landscape menu makes). */
+  padding-top: var(--corner-top, 0px);
+  box-sizing: border-box;
+}
+
+/* ============================================================== the board */
+
+.zd-board {
+  --gap: max(2px, calc(var(--cell-px, 40px) * 0.06));
+  --tile-r: max(4px, calc(var(--cell-px, 40px) * 0.17));
+  position: relative;
+  flex: none;
+  width: var(--board-px, 300px);
+  height: var(--board-px, 300px);
+  border-radius: var(--radius);
+  background: var(--board);
+  /* The rim and the lip: an ink edge, then a darker step beneath, so the
+     board sits on the meadow like a tray rather than floating on it. */
+  box-shadow:
+    0 0 0 3px var(--ink),
+    0 7px 0 3px var(--bg-deep),
+    0 14px 26px 4px rgba(0, 0, 0, 0.22);
+}
+
+/* Uniform gap + half a gap of padding = every track exactly (cell + gap)
+   wide, which is what lets .zd-boxes land on the gap centres (board.js). */
+.zd-grid {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  gap: var(--gap);
+  padding: calc(var(--gap) / 2);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ink) 16%, var(--board));
+}
+.zd-row {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.zd-boxes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--bx), 1fr);
+  grid-template-rows: repeat(var(--by), 1fr);
+  border-radius: var(--radius);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+.zd-boxes > div {
+  /* Two neighbours' 1.5px edges meet in a 3px ink line on the gap centre. */
+  border: 1.5px solid var(--ink);
+}
+
+/* ---- a cell ---- */
+
+.zd-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: max(3px, calc(var(--cell-px, 40px) * 0.12));
+  background: var(--cell);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  transition: background-color 0.15s ease;
+}
+.zd-cell.is-given {
+  cursor: default;
+}
+/* Overlay for the transient marks (Check, wrong-entry hint) so they never
+   fight the cell's own background highlight. */
+.zd-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.zd-cell:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: -2px;
+  z-index: 4;
+}
+
+/* Tutorial emphasis, under every other highlight. */
+.zd-cell.emph {
+  background: color-mix(in srgb, var(--leaf) 26%, var(--cell));
+}
+.zd-cell.in-unit {
+  background: var(--shade);
+}
+.zd-cell.emph.in-unit {
+  background: color-mix(in srgb, var(--leaf) 22%, var(--shade));
+}
+.zd-cell.is-sel {
+  background: color-mix(in srgb, var(--sun) 42%, var(--cell));
+  box-shadow: inset 0 0 0 2px var(--sun);
+}
+
+/* ---- the piece ---- */
+
+.zd-tile {
+  --lift: 0 0 0 0 transparent;
+  --ring: 0 0 0 0 transparent;
+  position: absolute;
+  inset: 7%;
+  display: grid;
+  place-items: center;
+  border-radius: var(--tile-r);
+  box-shadow: var(--ring), var(--lift);
+  pointer-events: none;
+  transform-origin: 50% 85%;
+}
+.zd-cell:not(.has-tile) > .zd-tile {
+  display: none;
+}
+.zd-tile > svg {
+  width: 86%;
+  height: 86%;
+  display: block;
+  overflow: visible;
+}
+/* Numerals want a touch more breathing room than animals to stay crisp. */
+.zd-board[data-skin='numbers'] .zd-tile > svg {
+  width: 74%;
+  height: 74%;
+}
+
+/* Givens: flat tiles printed on the board. */
+.zd-cell.is-given > .zd-tile {
+  background: var(--given);
+  box-shadow: var(--ring), inset 0 -1px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+/* Entries, and the dragged ghost: raised chunky tiles. */
+.zd-cell.is-entry > .zd-tile,
+.zd-ghost .zd-tile {
+  --lift:
+    0 max(2px, calc(var(--cell-px, 40px) * 0.07)) 0 color-mix(in srgb, var(--ink) 34%, transparent),
+    inset 0 -2px 0 var(--shade);
+  inset: 6% 6% 10%;
+  background: color-mix(in srgb, var(--cell) 55%, #fff);
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  box-sizing: border-box;
+}
+/* A player's numerals are teal so they never read as givens. The numeral
+   paths carry an ink stroke attribute; a CSS property outranks it. */
+.zd-cell.is-entry .zd-n path,
+.zd-ghost .zd-n path {
+  stroke: var(--bg);
+}
+
+/* Every copy of the focused symbol (data-hl on the board, data-d on the
+   cell — board.js), and its pencil marks, without a loop in JS. */
+.zd-board[data-hl='1'] .zd-cell[data-d='1'],
+.zd-board[data-hl='2'] .zd-cell[data-d='2'],
+.zd-board[data-hl='3'] .zd-cell[data-d='3'],
+.zd-board[data-hl='4'] .zd-cell[data-d='4'],
+.zd-board[data-hl='5'] .zd-cell[data-d='5'],
+.zd-board[data-hl='6'] .zd-cell[data-d='6'],
+.zd-board[data-hl='7'] .zd-cell[data-d='7'],
+.zd-board[data-hl='8'] .zd-cell[data-d='8'],
+.zd-board[data-hl='9'] .zd-cell[data-d='9'] {
+  background: color-mix(in srgb, var(--sun) 34%, var(--cell));
+}
+.zd-board[data-hl='1'] .zd-cell[data-d='1'] > .zd-tile,
+.zd-board[data-hl='2'] .zd-cell[data-d='2'] > .zd-tile,
+.zd-board[data-hl='3'] .zd-cell[data-d='3'] > .zd-tile,
+.zd-board[data-hl='4'] .zd-cell[data-d='4'] > .zd-tile,
+.zd-board[data-hl='5'] .zd-cell[data-d='5'] > .zd-tile,
+.zd-board[data-hl='6'] .zd-cell[data-d='6'] > .zd-tile,
+.zd-board[data-hl='7'] .zd-cell[data-d='7'] > .zd-tile,
+.zd-board[data-hl='8'] .zd-cell[data-d='8'] > .zd-tile,
+.zd-board[data-hl='9'] .zd-cell[data-d='9'] > .zd-tile {
+  --ring: 0 0 0 2.5px var(--sun);
+}
+.zd-board[data-hl='1'] .zd-note[data-d='1'].on,
+.zd-board[data-hl='2'] .zd-note[data-d='2'].on,
+.zd-board[data-hl='3'] .zd-note[data-d='3'].on,
+.zd-board[data-hl='4'] .zd-note[data-d='4'].on,
+.zd-board[data-hl='5'] .zd-note[data-d='5'].on,
+.zd-board[data-hl='6'] .zd-note[data-d='6'].on,
+.zd-board[data-hl='7'] .zd-note[data-d='7'].on,
+.zd-board[data-hl='8'] .zd-note[data-d='8'].on,
+.zd-board[data-hl='9'] .zd-note[data-d='9'].on {
+  background: color-mix(in srgb, var(--sun) 60%, transparent);
+}
+
+/* Conflict: a red ring on both clashing pieces. More specific than the
+   same-symbol ring above, because the reason beats the highlight. */
+.zd-board .zd-cell.conflict.has-tile > .zd-tile {
+  --ring: 0 0 0 3px var(--bad);
+}
+.zd-board .zd-cell.conflict.has-tile {
+  background: color-mix(in srgb, var(--bad) 14%, var(--cell));
+}
+
+/* Check / wrong-entry hint: marked, then fading by itself. */
+.zd-cell.wrong::after {
+  opacity: 1;
+  background: color-mix(in srgb, var(--bad) 24%, transparent);
+  box-shadow: inset 0 0 0 3px var(--bad);
+  animation: zd-fade 3.2s ease-in forwards;
+}
+
+/* Hint overlays. */
+.zd-cell.hint-unit {
+  background: color-mix(in srgb, var(--sun) 38%, var(--cell));
+  animation: zd-glow 1.4s ease-in-out infinite alternate;
+}
+.zd-board .zd-cell.hint-cause > .zd-tile {
+  --ring: 0 0 0 3px var(--coral);
+}
+.zd-cell.hint-focus {
+  box-shadow: inset 0 0 0 3px var(--coral);
+  animation: zd-pulse 1.1s ease-in-out infinite alternate;
+}
+
+/* Drag feedback. */
+.zd-cell.drop-hover {
+  background: color-mix(in srgb, var(--leaf) 40%, var(--cell));
+  box-shadow: inset 0 0 0 3px var(--leaf);
+}
+.zd-cell.lifting > .zd-tile {
+  opacity: 0.25;
+  transform: scale(0.86);
+}
+
+/* ---- pencil marks ---- */
+
+.zd-board[data-size='4'] {
+  --nc: 2;
+  --nr: 2;
+}
+.zd-board[data-size='6'] {
+  --nc: 3;
+  --nr: 2;
+}
+.zd-board[data-size='9'] {
+  --nc: 3;
+  --nr: 3;
+}
+.zd-notes {
+  position: absolute;
+  inset: 6%;
+  display: grid;
+  grid-template-columns: repeat(var(--nc, 3), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--nr, 3), minmax(0, 1fr));
+  pointer-events: none;
+}
+.zd-notes[hidden] {
+  display: none;
+}
+.zd-note {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 30%;
+  visibility: hidden;
+}
+.zd-note.on {
+  visibility: visible;
+}
+.zd-note > svg {
+  width: 92%;
+  height: 92%;
+  display: block;
+}
+
+/* ============================================================== motion */
+
+.zd-tile.pop {
+  animation: zd-pop 0.24s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.zd-tile.wiggle {
+  animation: zd-wiggle 0.45s ease-in-out;
+}
+.zd-tile.hop {
+  animation: zd-hop 0.56s cubic-bezier(0.3, 0.7, 0.4, 1) var(--delay, 0ms) both;
+}
+/* Animals hop; numbers pop (DESIGN §1, Celebration). */
+.zd-board[data-skin='numbers'] .zd-tile.hop {
+  animation-name: zd-hop-pop;
+}
+
+@keyframes zd-pop {
+  0% {
+    transform: scale(0.55);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes zd-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(-11deg);
+  }
+  45% {
+    transform: rotate(9deg);
+  }
+  70% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes zd-hop {
+  0% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-34%) scale(1.04, 1.08);
+  }
+  55% {
+    transform: translateY(0) scale(1.1, 0.9);
+  }
+  75% {
+    transform: translateY(-8%);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes zd-hop-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.28);
+  }
+  65% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes zd-fade {
+  0%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes zd-glow {
+  from {
+    box-shadow: inset 0 0 0 0 var(--sun);
+  }
+  to {
+    box-shadow: inset 0 0 0 3px var(--sun);
+  }
+}
+@keyframes zd-pulse {
+  from {
+    box-shadow: inset 0 0 0 2px var(--coral);
+  }
+  to {
+    box-shadow: inset 0 0 0 4px var(--coral);
+  }
+}
+
+/* ================================================================ ghost */
+
+/* Lives on <body> (input.js), so it uses fallbacks rather than --cell-px. */
+.zd-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.zd-ghost[hidden] {
+  display: none;
+}
+.zd-ghost .zd-tile {
+  position: absolute;
+  inset: 0;
+  border-radius: 20%;
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--ink) 30%, transparent),
+    0 12px 22px rgba(0, 0, 0, 0.3);
+}
+.zd-ghost[data-skin='numbers'] .zd-tile > svg {
+  width: 74%;
+  height: 74%;
+}
+.zd-ghost.flying {
+  transition: transform 0.22s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.zd-ghost.poof {
+  transition: opacity 0.2s ease-out;
+  opacity: 0;
+}
+
+/* ================================================================= coach */
+
+.zd-coach-slot {
+  position: relative;
+  flex: none;
+  height: calc(2.7em + 18px);
+  font-size: 15px;
+  z-index: 5;
+}
+.zd-coach {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius);
+  background: var(--board);
+  color: var(--ink);
+  box-shadow:
+    0 4px 0 var(--bg-deep),
+    0 10px 20px rgba(0, 0, 0, 0.18);
+}
+.zd-coach.is-empty {
+  visibility: hidden;
+}
+/* The speech-bubble tail points at the board: up when the board is above,
+   left when it is beside. */
+.zd-coach::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  margin-left: -9px;
+  border: 9px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--board);
+}
+.zd-play[data-mode='wide'] .zd-coach::before {
+  top: 50%;
+  left: -8px;
+  margin: -9px 0 0;
+  border: 9px solid transparent;
+  border-left: 0;
+  border-right-color: var(--board);
+}
+.zd-coach-text {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.zd-coach-actions {
+  display: flex;
+  gap: 8px;
+}
+.zd-coach-actions[hidden],
+.zd-coach-btn[hidden] {
+  display: none;
+}
+/* One logical pair, one size (hub §2): Show me and Got it are the same box;
+   the recommendation is carried by colour. */
+.zd-coach-btn {
+  flex: 1 1 0;
+  max-width: 11em;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.95em;
+  cursor: pointer;
+  background: var(--shade);
+  color: var(--ink);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--ink) 22%, transparent);
+}
+.zd-coach-more {
+  background: var(--sun);
+}
+.zd-coach-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 22%, transparent);
+}
+.zd-coach-btn:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* ================================================================== tray */
+
+.zd-tray {
+  --tile-max: 64px;
+  display: grid;
+  grid-template-columns: repeat(var(--tray-cols, 9), minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: calc(var(--tray-cols, 9) * var(--tile-max) + (var(--tray-cols, 9) - 1) * 8px);
+  margin-inline: auto;
+  padding-bottom: 5px; /* room for the tiles' lip */
+}
+/* Fewer pieces, bigger pieces: a 4×4 tray on a tablet should not be four
+   postage stamps beside a board of 150px cells. Constant per size rather
+   than derived from --cell-px, because play.js measures the tray to size
+   the board and a tray that followed the board would chase its own tail. */
+.zd-play[data-size='4'] .zd-tray {
+  --tile-max: 88px;
+}
+.zd-play[data-size='6'] .zd-tray {
+  --tile-max: 76px;
+}
+.zd-tray-tile {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--board);
+  color: var(--ink);
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  box-shadow:
+    0 5px 0 var(--bg-deep),
+    inset 0 -3px 0 var(--shade);
+  transition:
+    transform 0.15s ease,
+    opacity 0.2s ease,
+    box-shadow 0.15s ease;
+}
+.zd-tray-tile > .zd-tile {
+  inset: 12%;
+}
+.zd-tray[data-skin='numbers'] .zd-tray-tile > .zd-tile > svg {
+  width: 74%;
+  height: 74%;
+}
+.zd-tray-tile:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 2px 0 var(--bg-deep),
+    inset 0 -3px 0 var(--shade);
+}
+.zd-tray-tile:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 3px;
+}
+/* Tile first: the picked tile stays lifted and glowing until put down. */
+.zd-tray-tile.is-picked {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 3px var(--sun),
+    0 9px 0 var(--bg-deep),
+    0 0 18px 4px color-mix(in srgb, var(--sun) 60%, transparent);
+}
+
+.zd-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 1.45em;
+  height: 1.45em;
+  padding: 0 0.3em;
+  box-sizing: border-box;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--board);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--board);
+}
+.zd-done {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  display: none;
+  place-items: center;
+  background: var(--leaf);
+  color: var(--ink);
+  font-size: 12px;
+  box-shadow: 0 0 0 2px var(--board);
+}
+.zd-done > svg {
+  width: 70%;
+  height: 70%;
+}
+/* Settled: all N placed. Dim, tick, still usable (any placement is allowed). */
+.zd-tray-tile.is-done > .zd-tile {
+  opacity: 0.4;
+}
+.zd-tray-tile.is-done {
+  box-shadow:
+    0 2px 0 var(--bg-deep),
+    inset 0 -2px 0 var(--shade);
+  transform: translateY(3px);
+}
+.zd-tray-tile.is-done > .zd-badge {
+  display: none;
+}
+.zd-tray-tile.is-done > .zd-done {
+  display: grid;
+}
+
+/* ================================================================ toolbar */
+
+.zd-tools {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+}
+.zd-tools[data-count='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 400px;
+}
+.zd-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  cursor: pointer;
+  color: var(--board);
+  background: var(--bg-deep);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--bg-deep) 60%, #000),
+    inset 0 0 0 2px color-mix(in srgb, var(--board) 18%, transparent);
+  transition:
+    transform 0.1s ease,
+    background-color 0.15s ease;
+}
+.zd-tool:active {
+  transform: translateY(2px);
+}
+.zd-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.zd-tool:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+}
+.zd-tool[aria-pressed='true'] {
+  background: var(--sun);
+  color: var(--ink);
+}
+.zd-ico {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.zd-tool-label {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ===================================================== landscape phone */
+
+/*
+ * A sideways phone is 300–430px tall (hub §2). play.js already puts the
+ * board full height on the left and the controls on the right; this buys
+ * back the column's height from control sizes, stopping at 38px because a
+ * finger is still the pointer. .is-squeezed is play.js's own signal that
+ * the column did not fit beside the board, for any other short viewport.
+ */
+@media (orientation: landscape) and (max-height: 500px) {
+  .zd-side {
+    gap: 7px;
+  }
+  .zd-coach-slot {
+    font-size: 13px;
+    height: calc(2.6em + 14px);
+  }
+  .zd-coach {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .zd-coach-btn {
+    min-height: 38px;
+  }
+  .zd-play[data-size] .zd-tray {
+    --tile-max: 52px;
+    gap: 6px;
+  }
+  .zd-tool {
+    flex-direction: row;
+    gap: 5px;
+    min-height: 40px;
+  }
+  .zd-ico {
+    width: 20px;
+    height: 20px;
+  }
+  .zd-tool-label {
+    font-size: 11.5px;
+  }
+}
+.zd-play.is-squeezed .zd-side {
+  gap: 6px;
+}
+.zd-play.is-squeezed[data-size] .zd-tray {
+  --tile-max: 46px;
+  gap: 6px;
+}
+.zd-play.is-squeezed .zd-tool {
+  min-height: 38px;
+  flex-direction: row;
+  gap: 4px;
+}
+.zd-play.is-squeezed .zd-tool-label {
+  font-size: 11px;
+}
+.zd-play.is-squeezed .zd-coach-slot {
+  font-size: 13px;
+  height: calc(2.6em + 12px);
+}
+
+.zd-play.is-tight .zd-coach-slot {
+  height: 0;
+}
+.zd-play.is-tight .zd-coach.is-empty {
+  display: none;
+}
+
+/* ======================================================= reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-tile.pop,
+  .zd-tile.wiggle,
+  .zd-tile.hop,
+  .zd-cell.hint-unit,
+  .zd-cell.hint-focus {
+    animation: none;
+  }
+  .zd-cell.wrong::after {
+    animation: zd-fade 3.2s step-end forwards;
+  }
+  .zd-ghost.flying {
+    transition: none;
+  }
+}
