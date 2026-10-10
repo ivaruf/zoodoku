@@ -1,0 +1,16 @@
+{
+  "name": "Zoodoku — Sudoku, starting with a fox.",
+  "short_name": "Zoodoku",
+  "description": "Sudoku for curious kids: drag little animals into a 4×4 pond, climb a trail of sixty puzzles through the meadow to classic 9×9 numbers, or roam free. Unlimited hints, no timer, no scores.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1f5f5b",
+  "theme_color": "#1f5f5b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

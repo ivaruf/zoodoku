@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zoodoku</title>
+    <meta
+      name="description"
+      content="Sudoku, starting with a fox. Drag little animals into a 4×4 pond, follow a trail of sixty puzzles up to classic 9×9 numbers, or roam free. Unlimited hints, no timer, no scores."
+    />
+    <meta name="theme-color" content="#1f5f5b" />
+    <meta name="color-scheme" content="light" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+
+    <!--
+      The PWA layer. Every path is RELATIVE, so the game works from /zoodoku/,
+      from a domain root, and inside the arcade's iframe with no edits. The
+      arcade reads the manifest to build the cabinet and splits `name` on the
+      em-dash into a title and a tagline (hub CLAUDE.md §4–5).
+    -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+
+    <!-- The shell's look and the shared tokens first; the board's own sheet
+         (Lane B) only USES those tokens, so it must come second. -->
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/board.css" />
+
+    <!--
+      What quitting means here: back to the arcade when the arcade framed us,
+      closing the window when we are installed. arcade/exit.js decides that
+      and draws nothing; js/ui.js shows our own buttons only once
+      window.ArcadeExit has actually turned up.
+
+      Classic and deferred on purpose: another repo's file inside a module
+      graph takes the whole game down with it when it 404s — and it is
+      EXPECTED to 404 when this directory is served on its own, which is what
+      data-handled tells the crash bar at the bottom of this file.
+    -->
+    <script src="../arcade/exit.js" defer data-handled="optional"></script>
+    <!-- Classic and self-contained: stops a resting thumb selecting text or
+         opening Copy / Look Up on a tablet (hub CLAUDE.md §2). -->
+    <script src="js/touch-guard.js" defer></script>
+  </head>
+  <body>
+    <!--
+      Every screen is a <section class="screen">; js/ui.js shows exactly one.
+      They sit straight on the meadow (the body's own background), and every
+      panel is a sheet of cream card with an ink border — the board game's
+      box, not a dialog from somewhere else.
+    -->
+    <main id="app">
+      <!-- ============================ TITLE ============================ -->
+      <section id="screen-title" class="screen" aria-labelledby="wordmark">
+        <div class="title-art">
+          <!-- The wordmark is DOM, not an image: each letter a little wooden
+               tile, so it scales crisply and costs nothing to load. The
+               aria-label carries the word for a screen reader, since the
+               letters are split across eight boxes. -->
+          <h1 id="wordmark" class="wordmark" aria-label="Zoodoku">
+            <span aria-hidden="true">Z</span><span aria-hidden="true">o</span
+            ><span aria-hidden="true">o</span><span aria-hidden="true">d</span
+            ><span aria-hidden="true">o</span><span aria-hidden="true">k</span
+            ><span aria-hidden="true">u</span>
+          </h1>
+          <p class="tagline">Sudoku, starting with a fox.</p>
+          <!-- A tilted 4×4 board with a few animals on it, drawn by js/ui.js
+               from js/animals.js. Decoration only. -->
+          <div id="title-scene" class="title-scene" aria-hidden="true"></div>
+        </div>
+
+        <nav class="title-doors" aria-label="Start">
+          <!-- The way IN, in the game's own words. Its two lines are written by
+               js/ui.js: "▶ Follow the trail" over "Level 12 · Meadow 6×6", or
+               "▶ Back to your puzzle" when a board is waiting in storage. -->
+          <button type="button" id="door-trail" class="btn primary door-primary" data-autofocus>
+            <span id="door-trail-main" class="door-main">▶ Follow the trail</span>
+            <span id="door-trail-sub" class="door-sub">Level 1 · Pond 4×4</span>
+          </button>
+          <div class="door-pair">
+            <button type="button" id="door-map" class="btn">Trail map</button>
+            <button type="button" id="door-free" class="btn">Free roam</button>
+          </div>
+          <button type="button" id="door-howto" class="btn ghost">
+            <span id="howto-tag" class="howto-tag" hidden>New here?</span>
+            How to play
+          </button>
+          <!-- The way OUT. Plain words, never the game's voice (hub §2).
+               Hidden until arcade/exit.js says there is somewhere to go. -->
+          <button type="button" id="title-exit" class="btn ghost exit" hidden>
+            Back to arcade
+          </button>
+        </nav>
+
+        <!-- Update and build line live on the title ONLY, so a new build can
+             never interrupt a board (hub §3; js/update.js). -->
+        <div class="title-foot">
+          <button type="button" id="update" class="btn update" hidden>
+            <span class="update-main">A new zoo is ready</span>
+            <span class="update-sub">Tap to update</span>
+          </button>
+          <p id="build" class="build" hidden></p>
+        </div>
+      </section>
+
+      <!-- ========================== TRAIL MAP ========================== -->
+      <!-- A list screen, so it scrolls — the hub's no-scroll rule is for
+           menus, and sixty stops are not a menu. -->
+      <section id="screen-trail" class="screen" aria-labelledby="trail-title" hidden>
+        <header class="screen-head">
+          <button type="button" id="trail-back" class="btn ghost small" data-autofocus>Back</button>
+          <h2 id="trail-title">The trail</h2>
+        </header>
+        <div id="trail-map" class="trail-map"></div>
+      </section>
+
+      <!-- ========================== FREE ROAM ========================== -->
+      <section id="screen-free" class="screen" aria-labelledby="free-title" hidden>
+        <div class="panel free-panel">
+          <div class="free-col free-col-a">
+            <h2 id="free-title">Free roam</h2>
+            <p class="hint">Any board, any time. They never run out.</p>
+            <div class="row">
+              <span class="label" id="free-size-label">Board</span>
+              <div id="free-size" class="seg" role="group" aria-labelledby="free-size-label">
+                <button type="button" data-size="4" aria-pressed="true">Pond <small>4×4</small></button>
+                <button type="button" data-size="6" aria-pressed="false">Meadow <small>6×6</small></button>
+                <button type="button" data-size="9" aria-pressed="false">Savanna <small>9×9</small></button>
+              </div>
+            </div>
+            <div class="row">
+              <span class="label" id="free-skin-label">Show as</span>
+              <div id="free-skin" class="seg" role="group" aria-labelledby="free-skin-label">
+                <button type="button" data-skin="animals" aria-pressed="true">Animals</button>
+                <button type="button" data-skin="numbers" aria-pressed="false">Numbers</button>
+              </div>
+            </div>
+          </div>
+          <div class="free-col free-col-b">
+            <div class="row">
+              <span class="label" id="free-paws-label">Paws</span>
+              <!-- Built by js/ui.js: one button per paw tier, like a star
+                   rating — tap the third and three paws light up. -->
+              <div id="free-paws" class="seg paws" role="group" aria-labelledby="free-paws-label"></div>
+            </div>
+            <p id="free-paws-note" class="hint paws-note"></p>
+            <button type="button" id="free-go" class="btn primary" data-autofocus>New puzzle</button>
+            <button type="button" id="free-back" class="btn ghost">Back</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ PLAY ============================= -->
+      <!--
+        The corner tools sit on top of every screen including this one —
+        Zoodoku has no HUD that wants the top-right, so fullscreen stays
+        reachable mid-puzzle (DESIGN §6). The play head is laid out to leave
+        that corner empty, and #play-root gets everything beneath it.
+      -->
+      <section id="screen-play" class="screen" aria-label="Puzzle" hidden>
+        <header class="play-head">
+          <p id="play-label" class="play-label"></p>
+          <button type="button" id="tutorial-skip" class="btn ghost small" hidden>Skip</button>
+        </header>
+        <!-- Handed to mountPlay() (js/play.js, Lane B) empty; everything in it
+             is theirs. -->
+        <div id="play-root" class="play-root"></div>
+        <!-- While the engine builds a board. 9×9 can take a second or two;
+             a wobbling egg is better than a blank meadow. Backing out from
+             here simply discards the answer when it arrives. -->
+        <div id="hatching" class="hatching" role="status" hidden>
+          <div class="egg" aria-hidden="true"></div>
+          <p>Hatching a puzzle…</p>
+          <button type="button" id="hatching-back" class="btn ghost small">Back</button>
+        </div>
+      </section>
+
+      <!-- =========================== WIN CARD ========================== -->
+      <section id="screen-win" class="screen" aria-labelledby="win-title" hidden>
+        <div class="panel win-panel">
+          <!-- The solved board, every animal hopping in a wave. No score, no
+               time, no stars: the board itself is the trophy. -->
+          <div id="win-board" class="win-board" aria-hidden="true"></div>
+          <div class="win-words">
+            <h2 id="win-title">Everyone's home!</h2>
+            <p id="win-sub" class="hint"></p>
+            <div class="win-actions">
+              <button type="button" id="win-next" class="btn primary" data-autofocus>Next puzzle</button>
+              <button type="button" id="win-other" class="btn">Trail map</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========================== THE CORNER ========================== -->
+    <!--
+      Menu, mute, fullscreen — in that order, so fullscreen is the one in the
+      actual corner (hub §2). Markup and path data are neonfox's, to the path:
+      a player crossing from one cabinet to the next is looking at the same
+      object, not a family resemblance.
+
+      PLACEMENT: ON EVERY SCREEN. Zoodoku has no score strip or pause pill
+      competing for the top-right, so the cluster never yields it, and
+      fullscreen stays reachable mid-puzzle — the cost the "menus only" shape
+      pays is one we do not have to. The play head and every screen leave the
+      corner empty instead.
+
+      Art carries the meaning, so each plate has a real aria-label and title;
+      js/ui.js (mute) and js/screen.js (fullscreen) write them together with
+      aria-pressed, which is also what the CSS reads to swap the glyph.
+    -->
+    <div id="corner-tools">
+      <!-- THE MENU. Three bars and not a gear: in play it is the pause, with
+           the way to restart and the way out under it. -->
+      <button
+        type="button"
+        id="menu-open"
+        class="icon-button"
+        aria-label="Menu"
+        title="Menu (Esc)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <!-- MUTE, a live toggle: one tap, mid-puzzle, nothing paused, no panel.
+           The two levels behind the menu keep their values while it is down. -->
+      <button
+        type="button"
+        id="mute-toggle"
+        class="icon-button"
+        aria-pressed="false"
+        aria-label="Mute"
+        title="Mute (M)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 5 6 9H3v6h3l5 4Z" />
+          <path class="icon-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+          <path class="icon-slash" d="m15.5 9.5 6 5m0-5-6 5" />
+        </svg>
+      </button>
+      <!-- Hidden until js/screen.js has found a working request/exit pair —
+           iPhone Safari has none. -->
+      <button
+        type="button"
+        id="screen-toggle"
+        class="icon-button"
+        aria-pressed="false"
+        aria-label="Fullscreen"
+        title="Fullscreen"
+        hidden
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path class="icon-off" d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />
+          <path class="icon-on" d="M3 9h6V3M21 9h-6V3M3 15h6v6M21 15h-6v6" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- ========================= THE MENU PANEL ======================= -->
+    <!--
+      ONE PANEL, TWO FACES (maxgear's menuReturn pattern). Opened from play it
+      is the pause: "Paused", the way back to the puzzle, the board's own
+      options and the two ways to abandon it. Opened anywhere else it is
+      settings, and "Back" returns to wherever it was opened from. js/ui.js
+      hides what does not apply; the sliders are the same nodes either way.
+
+      Two columns of markup that simply stack in portrait; on a landscape
+      phone css/style.css stands them side by side so the panel never scrolls.
+
+      tabindex="-1" so opening it can put focus inside it.
+    -->
+    <div id="menu-scrim" class="scrim" hidden></div>
+    <section
+      id="menu"
+      class="panel menu-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="menu-title"
+      tabindex="-1"
+      hidden
+    >
+      <div class="menu-col menu-col-a">
+        <p id="menu-kicker" class="kicker">The animals will wait</p>
+        <h2 id="menu-title">Paused</h2>
+        <button type="button" id="menu-resume" class="btn primary">Back to the puzzle</button>
+
+        <div class="row" id="menu-skin-row">
+          <span class="label" id="menu-skin-label">Show as</span>
+          <div id="menu-skin" class="seg" role="group" aria-labelledby="menu-skin-label">
+            <button type="button" data-skin="animals" aria-pressed="true">Animals</button>
+            <button type="button" data-skin="numbers" aria-pressed="false">Numbers</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="label" id="menu-conflicts-label">Clash marks</span>
+          <div id="menu-conflicts" class="seg" role="group" aria-labelledby="menu-conflicts-label">
+            <button type="button" data-on="true" aria-pressed="true">On</button>
+            <button type="button" data-on="false" aria-pressed="false">Off</button>
+          </div>
+        </div>
+
+        <!-- The two ways to leave this board, peers and so equal in size. -->
+        <div class="pair" id="menu-board-actions">
+          <button type="button" id="menu-restart" class="btn small">Restart puzzle</button>
+          <button type="button" id="menu-leave" class="btn small">Trail map</button>
+        </div>
+      </div>
+
+      <div class="menu-col menu-col-b">
+        <!-- The two volume rows (hub §2): MUSIC and EFFECTS in every game,
+             labelled ranges with an <output> showing the number. -->
+        <div class="row">
+          <label class="label" for="music-vol">Music</label>
+          <div class="slider">
+            <input type="range" id="music-vol" min="0" max="100" step="1" value="60" />
+            <output id="music-vol-out" for="music-vol">60</output>
+          </div>
+        </div>
+        <div class="row">
+          <label class="label" for="sfx-vol">Effects</label>
+          <div class="slider">
+            <input type="range" id="sfx-vol" min="0" max="100" step="1" value="80" />
+            <output id="sfx-vol-out" for="sfx-vol">80</output>
+          </div>
+        </div>
+        <!-- Said plainly, because two faders that quietly do nothing are worse
+             than none. The levels persist for real, so sound arrives at the
+             level its listener already chose. -->
+        <p class="hint" id="menu-sound-hint">The zoo is quiet for now — sound is coming.</p>
+
+        <button type="button" id="menu-exit" class="btn ghost exit" hidden>Back to arcade</button>
+        <button type="button" id="menu-close" class="btn ghost">Back</button>
+      </div>
+    </section>
+
+    <!-- =========================== CONFIRM =========================== -->
+    <!-- An in-page question, because confirm() is an OS dialog that belongs
+         to no game and blocks the whole page. Used for "Restart puzzle?" and
+         "Leave your current puzzle?". -->
+    <section
+      id="confirm"
+      class="panel confirm-panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-text"
+      tabindex="-1"
+      hidden
+    >
+      <p id="confirm-text"></p>
+      <p id="confirm-note" class="hint"></p>
+      <div class="pair">
+        <button type="button" id="confirm-no" class="btn primary">Keep it</button>
+        <button type="button" id="confirm-yes" class="btn">Leave it</button>
+      </div>
+    </section>
+
+    <!--
+      Crash bar. A module script reports its whole import graph through the
+      one <script> tag, so a failure here names js/main.js even when the file
+      that actually failed to load was one of its imports — say so in the
+      message, or the next reader goes and checks a file that is serving 200s.
+    -->
+    <div id="crash" role="alert" hidden></div>
+
+    <script>
+      // Surface load-time failures instead of a silent meadow.
+      (function () {
+        var bar = document.getElementById("crash");
+        function show(msg) {
+          bar.textContent = msg;
+          bar.hidden = false;
+        }
+        window.addEventListener(
+          "error",
+          function (e) {
+            var t = e.target;
+            // data-handled marks a script whose failure is already dealt
+            // with: ../arcade/exit.js is another repo's file and is simply
+            // absent when this game is served on its own.
+            if (t && t.tagName === "SCRIPT" && t.dataset && t.dataset.handled)
+              return;
+            if (t && t.tagName === "SCRIPT") {
+              show(
+                "A script failed to load: " +
+                  t.src +
+                  " (if this is js/main.js, the real culprit may be one of its imports)",
+              );
+              return;
+            }
+            // Only script loads are captured here as resources; a broken
+            // stylesheet or icon is not worth a red bar over the board.
+            if (t && t !== window && t.tagName) return;
+            show("Something broke: " + (e.message || e.type));
+          },
+          true,
+        );
+        window.addEventListener("unhandledrejection", function (e) {
+          show(
+            "Something broke: " +
+              (e.reason && e.reason.message ? e.reason.message : e.reason),
+          );
+        });
+      })();
+    </script>
+
+    <!--
+      The update affordance and the service worker behind it, then the
+      fullscreen plate: each its own module graph, loaded BEFORE main.js on
+      purpose, so neither dies with a failed import in the game's graph.
+    -->
+    <script type="module" src="js/update.js"></script>
+    <script type="module" src="js/screen.js"></script>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

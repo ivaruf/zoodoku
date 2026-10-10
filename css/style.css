@@ -1,0 +1,1388 @@
+/*
+ * style.css — Zoodoku's shell: the meadow, the cream card panels, the corner,
+ * the title, the trail map, free roam, the play frame, the win card, the menu.
+ *
+ * THE LOOK (DESIGN §3): a wooden-and-paper board game left out on a meadow.
+ * Every panel is a sheet of cream card (--board) with a thick ink border and
+ * a hard bottom shadow, like the lid of a game box; every button is a chunky
+ * raised tile that presses DOWN when you tap it, the same physics as the
+ * pieces on the board. A small leaf sits on each card's corner. If a panel
+ * would look the same over a white page it is not finished (hub §2) — these
+ * would look like a board game on a white page, which is the test passed the
+ * honest way.
+ *
+ * System fonts only (no web fonts: hub §1 — a font CDN is a watcher).
+ *
+ * THE TOKENS on :root are the contract with css/board.css (Lane B), which
+ * only USES them. Declared here verbatim from DESIGN §3; change them there
+ * first.
+ *
+ * THE CORNER IS ON EVERY SCREEN (DESIGN §6), so every screen reserves the top
+ * of itself for it via --corner-space, and the landscape-phone block at the
+ * bottom keeps it in the same place sideways and makes the room elsewhere.
+ */
+
+:root {
+  --bg: #1f5f5b;
+  --bg-deep: #174845;
+  --board: #fff6e3;
+  --cell: #fffaf0;
+  --ink: #2e4a48;
+  --ink-soft: #6c8583;
+  --sun: #ffc94a;
+  --coral: #ff7a59;
+  --leaf: #8fd18a;
+  --bad: #e0503c;
+  --given: #efe4cc;
+  --shade: #f6ebd2;
+  --radius: 14px;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+
+  /* Shell-only. The corner's geometry as tokens, so every screen's
+     reservation follows the plate size instead of a magic number. */
+  --plate: 42px;
+  --corner-inset: 12px;
+  --corner-h: calc(var(--plate) + 14px); /* plate + 2×4 padding + 2×3 border */
+  --corner-w: calc(var(--plate) * 3 + 22px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --corner-space: calc(var(--corner-inset) + var(--corner-h) + 10px + var(--safe-t));
+  --press: 4px; /* how far a raised tile sits above the table */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/*
+ * This is a game, not a document (hub CLAUDE.md §2; lobbots/css/style.css).
+ * On a tablet a resting thumb is a long press and a drag across a label is a
+ * text selection, so iPad Safari highlights words and offers Copy / Look Up
+ * mid-puzzle. Nothing selects and nothing opens a callout, except a real text
+ * field. `manipulation` drops double-tap-to-zoom without taking pinch away.
+ * js/touch-guard.js is the second half: CSS alone is not honoured everywhere.
+ */
+html,
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* A range is an input but not a text field: dragging it must not select. */
+input[type="range"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/*
+ * The meadow. A teal field with a scatter of darker clover dots and a soft
+ * sunlit patch — drawn in gradients, so it costs no file and scales to any
+ * screen. It is the table every card and the board sit on.
+ */
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 30% 10%, rgba(255, 201, 74, 0.13), transparent 70%),
+    radial-gradient(circle at 20% 30%, var(--bg-deep) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 65%, var(--bg-deep) 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 45% 85%, rgba(143, 209, 138, 0.18) 0 3px, transparent 4px),
+    radial-gradient(ellipse 120% 80% at 50% 120%, var(--bg-deep), transparent 70%);
+  background-size: 100% 100%, 46px 46px, 38px 38px, 58px 58px, 100% 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.1;
+}
+
+/* ================================================================ screens */
+
+/*
+ * Every screen fills the viewport inside the safe areas, reserves the top for
+ * the corner, centres its content, and keeps an overflow:auto behind it as a
+ * safety net for a viewport shorter than anything measured (dam_break's
+ * phrase) — not as the plan. The trail map is the one screen that scrolls on
+ * purpose.
+ */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  justify-content: safe center;
+  gap: 14px;
+  padding: var(--corner-space) calc(16px + var(--safe-r)) calc(16px + var(--safe-b))
+    calc(16px + var(--safe-l));
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================================================================= panels */
+
+/*
+ * The cream card. Ink border, a hard shadow underneath like a box lid on a
+ * table, and a leaf pinned to its top-left corner — the "little leaf/paw
+ * details" that make it this game's card and nobody else's.
+ */
+.panel {
+  position: relative;
+  background: var(--board);
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow:
+    0 6px 0 rgba(23, 72, 69, 0.7),
+    0 18px 36px rgba(0, 0, 0, 0.22);
+  padding: 22px 20px 18px;
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 18px;
+  width: 26px;
+  height: 18px;
+  background: var(--leaf);
+  border: 2.5px solid var(--ink);
+  border-radius: 0 100% 0 100%;
+  transform: rotate(-18deg);
+}
+.panel h2 {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.kicker {
+  margin: 0 0 2px;
+  color: var(--coral);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ================================================================ buttons */
+
+/*
+ * A raised tile: cream face, ink rim, a hard ink shadow --press below it.
+ * :active sinks it by exactly that much so it lands on the table — the same
+ * press the play surface's pieces make. Comfortable for a finger: 48px tall,
+ * 38 at the very least on a sideways phone.
+ */
+.btn {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 48px;
+  padding: 8px 18px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: var(--cell);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.15;
+  text-align: center;
+  box-shadow: 0 var(--press) 0 var(--ink);
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    background 0.15s;
+}
+.btn:hover {
+  background: #fffdf7;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(calc(var(--press) - 1px));
+  box-shadow: 0 1px 0 var(--ink);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--sun);
+}
+.btn.primary:hover {
+  background: #ffd36b;
+}
+.btn.small {
+  min-height: 40px;
+  padding: 6px 14px;
+  font-size: 0.95rem;
+  border-radius: 13px;
+  --press: 3px;
+}
+
+/* Ghost: the quieter door. On the meadow it is a light outline (a cream tile
+   would shout as loudly as the way in); on a card it is a flat, dashed one. */
+.btn.ghost {
+  background: rgba(255, 246, 227, 0.1);
+  border-color: rgba(255, 246, 227, 0.75);
+  color: var(--board);
+  box-shadow: none;
+}
+.btn.ghost:hover {
+  background: rgba(255, 246, 227, 0.2);
+}
+.btn.ghost:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.panel .btn.ghost {
+  background: transparent;
+  border: 2.5px dashed var(--ink-soft);
+  color: var(--ink);
+}
+.panel .btn.ghost:hover {
+  background: var(--shade);
+}
+
+/* Visible focus, everywhere, in the sun colour so it reads on teal and cream. */
+.btn:focus-visible,
+.seg button:focus-visible,
+.stop:focus-visible,
+.icon-button:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 3px;
+}
+.panel .btn:focus-visible,
+.panel .seg button:focus-visible {
+  outline-color: var(--coral);
+}
+
+/* Two peers side by side: same box, `1fr 1fr`, so neither looks like the
+   lesser choice (hub §2, "things line up"). Weight comes from colour. */
+.pair,
+.door-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ================================================== rows, segs and ranges */
+
+/*
+ * A settings row: a label in a gutter that is the SAME width in every row of
+ * every panel (one flex-basis on .label, neonfox's habit), then the control.
+ * So every control in a panel starts at one x.
+ */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.label {
+  flex: 0 0 6.6em;
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+/*
+ * The segmented control: alternatives, so every option is the SAME size —
+ * `flex: 1 1 0`, never auto, or "Pond" would come out smaller than
+ * "Savanna" and look like it mattered less (hub §2). A pressed option sinks
+ * onto the table in sun yellow.
+ */
+.seg {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.seg button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 46px;
+  padding: 4px 6px;
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  background: var(--cell);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  box-shadow: 0 3px 0 var(--ink);
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s,
+    background 0.15s;
+}
+.seg button small {
+  display: block;
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.seg button[aria-pressed="true"] {
+  background: var(--sun);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+/* Paws: a rating row. Every paw button is the same size; the lit ones are
+   coral, the rest a faint outline of a paw. */
+.paws button {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+}
+.paw {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  color: rgba(108, 133, 131, 0.35);
+}
+.paws button.lit .paw {
+  color: var(--coral);
+}
+.paws-note {
+  min-height: 1.3em;
+  /* Under the control, past the gutter: .label is 6.6em of 0.98rem. */
+  padding-left: calc(6.47rem + 12px);
+}
+
+/*
+ * The range, dressed as a garden path: a rounded ink-rimmed track that fills
+ * with leaf green up to the thumb (--fill, written by js/ui.js), and a sun
+ * button of a thumb. A bare OS slider belongs to no game (hub §2). Both vendor
+ * pseudo-elements are styled; there is no shared selector for them.
+ */
+.slider {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  min-width: 0;
+}
+.slider input[type="range"] {
+  --fill: 60%;
+  flex: 1;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 32px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.slider input[type="range"]:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--leaf) var(--fill), var(--shade) var(--fill));
+}
+.slider input[type="range"]::-moz-range-track {
+  height: 7px;
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--leaf) var(--fill), var(--shade) var(--fill));
+}
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -9.5px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--sun);
+  box-shadow: 0 2px 0 var(--ink);
+}
+.slider input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--sun);
+  box-shadow: 0 2px 0 var(--ink);
+}
+.slider output {
+  flex: 0 0 2.4em;
+  text-align: right;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================= the corner */
+
+/*
+ * The corner (neonfox/css/style.css, re-dressed as a cream tile strip). Fixed
+ * to the viewport with its own safe-area insets. ON EVERY SCREEN — Zoodoku has
+ * no HUD that wants the top-right — so it sits above the screens and above
+ * the menu's scrim (mute stays a live control with the menu open, and the
+ * menu plate closes what it opened). Every screen and the menu reserve
+ * --corner-space for it instead of it ever moving.
+ */
+#corner-tools {
+  position: fixed;
+  top: calc(var(--corner-inset) + var(--safe-t));
+  right: calc(var(--corner-inset) + var(--safe-r));
+  z-index: 45;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--board);
+  border: 3px solid var(--ink);
+  box-shadow: 0 4px 0 rgba(23, 72, 69, 0.8);
+}
+.icon-button {
+  width: var(--plate);
+  height: var(--plate);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+/* THE TRAP, hit three times in one day across the hub: [hidden] is only a
+   presentation hint and loses to the display:grid above, so without this the
+   fullscreen plate shows on exactly the browser (iPhone Safari) it exists to
+   hide from. The global [hidden] rule covers it too; this says it out loud. */
+.icon-button[hidden] {
+  display: none;
+}
+.icon-button:hover {
+  background: var(--shade);
+}
+.icon-button:active {
+  transform: scale(0.92);
+}
+/* Stroked, not filled, so currentColor drives the whole glyph. */
+.icon-button svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Both states in one svg; aria-pressed picks, so the picture and the label
+   (written in the same breath by js/screen.js / js/ui.js) cannot drift. */
+.icon-button .icon-on,
+.icon-button .icon-slash {
+  display: none;
+}
+.icon-button[aria-pressed="true"] .icon-off {
+  display: none;
+}
+.icon-button[aria-pressed="true"] .icon-on {
+  display: inline;
+}
+#screen-toggle[aria-pressed="true"] {
+  color: var(--bg);
+}
+#mute-toggle[aria-pressed="true"] .icon-waves {
+  display: none;
+}
+#mute-toggle[aria-pressed="true"] .icon-slash {
+  display: inline;
+}
+/* Coral when muted: lit because something is OFF, a different colour from
+   fullscreen's "something is ON". */
+#mute-toggle[aria-pressed="true"] {
+  color: var(--coral);
+}
+
+/* ================================================================== title */
+
+#screen-title {
+  gap: 18px;
+}
+.title-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/*
+ * The wordmark: each letter a wooden tile, each tile a different animal's
+ * colour and a slightly different tilt, as if tipped out of the box.
+ */
+.wordmark {
+  display: flex;
+  gap: 0.08em;
+  font-size: clamp(2.1rem, 10vw, 3.6rem);
+  font-weight: 900;
+  line-height: 1;
+}
+.wordmark span {
+  display: grid;
+  place-items: center;
+  width: 1.12em;
+  height: 1.22em;
+  padding-bottom: 0.06em;
+  background: var(--cell);
+  border: 0.07em solid var(--ink);
+  border-radius: 0.26em;
+  box-shadow: 0 0.1em 0 var(--ink);
+  color: var(--c);
+  -webkit-text-stroke: 0.02em var(--ink);
+  transform: rotate(var(--r)) translateY(var(--y, 0));
+}
+.wordmark span:nth-child(1) { --c: #f28c38; --r: -6deg; }
+.wordmark span:nth-child(2) { --c: #5cbf60; --r: 4deg; --y: -0.05em; }
+.wordmark span:nth-child(3) { --c: #4a90d9; --r: -3deg; }
+.wordmark span:nth-child(4) { --c: #e0a020; --r: 5deg; --y: 0.04em; }
+.wordmark span:nth-child(5) { --c: #e0789a; --r: -4deg; }
+.wordmark span:nth-child(6) { --c: #9b6fd1; --r: 3deg; --y: -0.04em; }
+.wordmark span:nth-child(7) { --c: #e0503c; --r: -5deg; }
+
+.tagline {
+  margin: 4px 0 0;
+  color: var(--board);
+  font-weight: 700;
+  font-size: 1rem;
+  opacity: 0.92;
+}
+
+/* The little scene: a 4×4 board tipped back on the table, the fox in the air
+   above its empty cell. Sized by the viewport's shorter side so it shrinks
+   before the doors run off a short screen. */
+.title-scene {
+  position: relative;
+  width: min(44vw, 24vh, 190px);
+  aspect-ratio: 1;
+  margin: 10px 0 4px;
+}
+.mini-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  height: 100%;
+  background: var(--board);
+  border: 4px solid var(--ink);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 0 rgba(23, 72, 69, 0.85);
+  transform: perspective(500px) rotateX(24deg) rotate(-7deg);
+}
+.mini-cell {
+  display: grid;
+  place-items: center;
+  border-right: 1.5px solid rgba(46, 74, 72, 0.3);
+  border-bottom: 1.5px solid rgba(46, 74, 72, 0.3);
+}
+.mini-cell:nth-child(4n) {
+  border-right: 0;
+}
+.mini-cell:nth-child(n + 13) {
+  border-bottom: 0;
+}
+.mini-cell.bx-r {
+  border-right: 3px solid var(--ink);
+}
+.mini-cell.bx-b {
+  border-bottom: 3px solid var(--ink);
+}
+.mini-cell svg {
+  width: 84%;
+  height: 84%;
+}
+/* The fox, lifted ~1.3× above the finger as the play surface does it,
+   bobbing over cell 6 (row 2, column 3). */
+.mini-lift {
+  position: absolute;
+  left: 48%;
+  top: 6%;
+  width: 34%;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 10px 4px rgba(0, 0, 0, 0.25));
+  animation: bob 2.6s ease-in-out infinite;
+}
+.mini-lift svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-9%) rotate(4deg); }
+}
+
+/* The doors: one column, every door the column's width (grid stretch — the
+   column comes out as wide as the widest member, no magic number). */
+.title-doors {
+  display: grid;
+  justify-items: stretch;
+  gap: 10px;
+  width: min(100%, 340px);
+}
+.door-primary {
+  min-height: 66px;
+  --press: 5px;
+}
+.door-main {
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+.door-sub {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(46, 74, 72, 0.78);
+}
+.door-pair .btn {
+  min-width: 0;
+}
+#door-howto {
+  flex-direction: row;
+  gap: 8px;
+}
+/* "New here?" — a gentle tag and a slow glow on How to play, never a forced
+   tutorial (DESIGN §1). */
+.howto-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sun);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+#door-howto.nudge {
+  border-color: var(--sun);
+  animation: glow 2.4s ease-in-out infinite;
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 201, 74, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 201, 74, 0.3); }
+}
+
+.title-foot {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.btn.update {
+  background: var(--leaf);
+  min-height: 52px;
+}
+.update-sub {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.build {
+  margin: 0;
+  color: var(--board);
+  opacity: 0.6;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ============================================================== trail map */
+
+#screen-trail {
+  justify-content: flex-start;
+  gap: 12px;
+}
+.screen-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 520px);
+  color: var(--board);
+}
+.screen-head h2 {
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.trail-map {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 520px);
+  padding-bottom: 24px;
+}
+.region {
+  position: relative;
+  padding: 14px 12px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 rgba(23, 72, 69, 0.7);
+}
+/* Each region its own ground: pond water, meadow grass, savanna sand. */
+.region-4 { background: #dcefee; }
+.region-6 { background: #e4f3d8; }
+.region-9 { background: #f7e8c6; }
+.region-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 6px;
+}
+.region-mascot {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+}
+.region-mascot svg {
+  width: 100%;
+  height: 100%;
+}
+.region-head h3 {
+  flex: 1;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+.region-head h3 small {
+  font-size: 0.7em;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.region-count {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+/* The snake grid. No gap, uniform rows: js/ui.js draws the path in cell
+   units on that assumption. */
+.trail-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(var(--rows), 80px);
+}
+.trail-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+/* A dotted line of footprints, in screen pixels whatever the stretch. */
+.trail-path path {
+  fill: none;
+  stroke: rgba(46, 74, 72, 0.45);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 0.1 13;
+}
+
+.stop {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  justify-self: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--cell);
+  box-shadow: 0 4px 0 var(--ink);
+  font-weight: 900;
+  font-size: 1.15rem;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+.stop:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.stop.solved {
+  background: var(--leaf);
+}
+.stop-tick {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+}
+.tick {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The next unsolved stop breathes: "a little harder" — an invitation, not a
+   gate. Every stop is open (DESIGN §2). */
+.stop.next {
+  background: var(--sun);
+  animation: breathe 1.8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 4px 0 var(--ink), 0 0 0 0 rgba(255, 201, 74, 0.6); }
+  50% { box-shadow: 0 4px 0 var(--ink), 0 0 0 9px rgba(255, 201, 74, 0); }
+}
+.stop.here {
+  background: var(--coral);
+  color: var(--cell);
+}
+.stop-tag {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--board);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ============================================================== free roam */
+
+.free-panel {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 470px);
+}
+.free-col {
+  display: grid;
+  gap: 12px;
+}
+.free-col .btn {
+  width: 100%;
+}
+
+/* ================================================================== play */
+
+/*
+ * The play frame. The head row is exactly the corner's height and leaves the
+ * corner's width empty on the right; #play-root (Lane B's, handed over
+ * empty) gets everything beneath, and the hatching egg sits over the same
+ * cell. touch-action:none on the play surface (DESIGN §5) — a drag there is a
+ * tile on its way somewhere, never a scroll.
+ */
+#screen-play {
+  display: grid;
+  grid-template-rows: var(--corner-h) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 10px;
+  padding-top: calc(var(--corner-inset) + var(--safe-t));
+  overflow: hidden;
+}
+.play-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-right: calc(var(--corner-w) + 4px);
+}
+.play-label {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 246, 227, 0.14);
+  border: 2px solid rgba(255, 246, 227, 0.35);
+  color: var(--board);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.play-head .btn.ghost.small {
+  min-height: 36px;
+  flex: 0 0 auto;
+}
+.play-root {
+  grid-row: 2;
+  grid-column: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  touch-action: none;
+}
+
+/* "Hatching a puzzle…" — an egg that wobbles, on a card over the play area. */
+.hatching {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 22px 26px 18px;
+  background: var(--board);
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 rgba(23, 72, 69, 0.7);
+  animation: fade-in 0.25s ease both;
+}
+.hatching p {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.hatching .btn.ghost {
+  background: transparent;
+  border: 2.5px dashed var(--ink-soft);
+  color: var(--ink);
+}
+.egg {
+  width: 58px;
+  height: 72px;
+  border: 3px solid var(--ink);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background:
+    radial-gradient(circle at 34% 40%, var(--leaf) 0 5px, transparent 6px),
+    radial-gradient(circle at 64% 62%, var(--sun) 0 4px, transparent 5px),
+    radial-gradient(circle at 58% 28%, var(--coral) 0 3px, transparent 4px),
+    var(--cell);
+  box-shadow: 0 4px 0 var(--ink);
+  transform-origin: 50% 90%;
+  animation: wobble 1.1s ease-in-out infinite;
+}
+.hatching.failed .egg {
+  animation: none;
+  opacity: 0.6;
+}
+@keyframes wobble {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-9deg); }
+  40% { transform: rotate(7deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(2deg); }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* =============================================================== win card */
+
+.win-panel {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  width: min(100%, 420px);
+  text-align: center;
+}
+.win-board {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), 1fr);
+  width: min(74vw, 42vh, 300px);
+  aspect-ratio: 1;
+  background: var(--cell);
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.win-cell {
+  display: grid;
+  place-items: center;
+  border-right: 1px solid rgba(46, 74, 72, 0.25);
+  border-bottom: 1px solid rgba(46, 74, 72, 0.25);
+  min-width: 0;
+  min-height: 0;
+}
+.win-cell.bx-r {
+  border-right: 3px solid var(--ink);
+}
+.win-cell.bx-b {
+  border-bottom: 3px solid var(--ink);
+}
+/* Every animal hops in a diagonal wave from the top-left, then rests, then
+   does it again — a board that is happy to be finished. */
+.win-cell svg,
+.win-cell .sym-fallback {
+  width: 86%;
+  height: 86%;
+  animation: hop 2.8s ease-in-out calc(var(--i) * 70ms) infinite;
+}
+@keyframes hop {
+  0% { transform: translateY(0) scale(1); }
+  7% { transform: translateY(-24%) scale(1.1, 0.95); }
+  14% { transform: translateY(0) scale(1.06, 0.92); }
+  19%, 100% { transform: translateY(0) scale(1); }
+}
+.sym-fallback {
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+.win-words {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.win-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ============================================================== the menu */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(18, 56, 53, 0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/*
+ * The panel lives in the space BELOW the corner (inset from --corner-space)
+ * and centres itself there with margin:auto, so the corner — which stays
+ * above the scrim — never covers it in portrait.
+ */
+.menu-panel {
+  position: fixed;
+  z-index: 42;
+  inset: var(--corner-space) calc(12px + var(--safe-r)) calc(12px + var(--safe-b))
+    calc(12px + var(--safe-l));
+  margin: auto;
+  width: min(420px, calc(100% - 24px - var(--safe-l) - var(--safe-r)));
+  height: max-content;
+  height: fit-content;
+  max-height: calc(100% - var(--corner-space) - 12px - var(--safe-b));
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  animation: fade-in 0.18s ease both;
+}
+.menu-panel:focus {
+  outline: none;
+}
+/* The menu scrolls as a last resort, and a scrolling box clips anything hung
+   outside it, so its leaf is pinned inside the bottom-right corner instead
+   of over the top-left edge. */
+.menu-panel::before,
+.confirm-panel::before {
+  top: auto;
+  left: auto;
+  bottom: 10px;
+  right: 14px;
+}
+.menu-col {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.menu-col .btn {
+  width: 100%;
+}
+#menu-sound-hint {
+  font-size: 0.85rem;
+}
+
+/* The in-page confirm, over everything including the menu. body::before is
+   its backdrop, and catches every stray tap behind it. */
+body.confirming::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(18, 56, 53, 0.6);
+}
+.confirm-panel {
+  position: fixed;
+  z-index: 51;
+  inset: 0;
+  margin: auto;
+  width: min(360px, calc(100% - 32px));
+  height: max-content;
+  height: fit-content;
+  display: grid;
+  gap: 10px;
+  text-align: center;
+  animation: fade-in 0.15s ease both;
+}
+.confirm-panel:focus {
+  outline: none;
+}
+#confirm-text {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+.confirm-panel .pair {
+  margin-top: 6px;
+}
+
+/* ============================================================ crash bar */
+
+#crash {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  padding: 10px 14px calc(10px + var(--safe-b));
+  background: var(--bad);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ========================================================= narrow phones */
+
+@media (max-width: 380px) {
+  .label {
+    flex-basis: 5.4em;
+  }
+  .paws-note {
+    padding-left: calc(5.29rem + 12px);
+  }
+  .seg button {
+    font-size: 0.85rem;
+  }
+  .panel {
+    padding: 20px 14px 16px;
+  }
+}
+
+/* ======================================== landscape phones: turn sideways */
+
+/*
+ * A phone on its side is 300–430px tall and a browser toolbar can take fifty
+ * of those, so a column that fits a portrait phone runs off the bottom
+ * sideways — and what goes off is whatever is last, usually the way out. What
+ * a sideways phone has instead is width, so each screen becomes two columns
+ * laid over the SAME markup (maxgear/css/style.css, neonfox/css/style.css):
+ * nothing moves in index.html, portrait is untouched, and a tablet — taller
+ * than 500px either way up — keeps the stacked layout.
+ *
+ * Controls come down to 38px and no lower: this fires on a phone, where the
+ * pointer is still a finger. The overflow:auto on .screen stays behind it as
+ * a safety net, not the plan.
+ *
+ * THE CORNER STAYS IN THE CORNER. 38px plates, a little closer to the edge,
+ * and the screens buy it the room through --corner-space as always.
+ */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --plate: 38px;
+    --corner-inset: 8px;
+    --corner-space: calc(var(--corner-inset) + var(--corner-h) + 6px + var(--safe-t));
+  }
+  .icon-button svg {
+    width: 20px;
+    height: 20px;
+  }
+  .screen {
+    gap: 10px;
+    padding-bottom: calc(8px + var(--safe-b));
+  }
+  .panel {
+    padding: 16px 18px 14px;
+    border-radius: 18px;
+  }
+  .panel h2 {
+    font-size: 1.35rem;
+  }
+  .btn {
+    min-height: 40px;
+    padding: 5px 14px;
+    font-size: 0.98rem;
+  }
+  .btn.small {
+    min-height: 38px;
+  }
+  .btn.primary {
+    min-height: 44px;
+  }
+  .seg button,
+  .slider {
+    min-height: 38px;
+  }
+  .row {
+    gap: 10px;
+  }
+
+  /* ---- Title: the art left, every door right. ---- */
+  #screen-title {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "art doors"
+      "art foot";
+    align-content: center;
+    align-content: safe center;
+    align-items: center;
+    justify-items: center;
+    gap: 6px 28px;
+  }
+  .title-art {
+    grid-area: art;
+  }
+  .title-doors {
+    grid-area: doors;
+    gap: 8px;
+  }
+  .title-foot {
+    grid-area: foot;
+  }
+  .wordmark {
+    font-size: clamp(1.8rem, 6vw, 2.6rem);
+  }
+  .title-scene {
+    width: min(30vw, 34vh, 150px);
+  }
+  .door-primary {
+    min-height: 54px;
+  }
+  .door-main {
+    font-size: 1.1rem;
+  }
+
+  /* ---- Trail map: shorter rows, the region cards side by side would be
+     cramped, so it stays one scrolling list, just denser. ---- */
+  .trail-grid {
+    grid-template-rows: repeat(var(--rows), 66px);
+  }
+  .stop {
+    width: 46px;
+    height: 46px;
+    font-size: 1rem;
+  }
+
+  /* ---- Free roam: the board and its look left; paws and the way in right. */
+  .free-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    width: min(680px, 100%);
+    align-items: start;
+  }
+  .free-col {
+    gap: 9px;
+  }
+  .paws-note {
+    padding-left: 0;
+  }
+
+  /* ---- Play: the head row shrinks with the corner; the board goes left at
+     full height and the tray right — that split is Lane B's, inside
+     #play-root. ---- */
+  #screen-play {
+    gap: 6px;
+  }
+  .play-label {
+    padding: 4px 12px;
+    font-size: 0.88rem;
+  }
+
+  /* ---- Win: the board left, the words and doors right. ---- */
+  .win-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+    width: min(620px, 100%);
+    text-align: left;
+  }
+  .win-board {
+    width: min(64vh, 40vw, 260px);
+  }
+
+  /* ---- Menu: two columns, never a scroll. It takes the full height (not
+     just the space under the corner), and the RIGHT column alone steps down
+     past the corner, because only the right column is under it and its
+     contents are short enough to pay for that. ---- */
+  .menu-panel {
+    inset: calc(8px + var(--safe-t)) calc(12px + var(--safe-r)) calc(8px + var(--safe-b))
+      calc(12px + var(--safe-l));
+    width: min(660px, calc(100% - 24px - var(--safe-l) - var(--safe-r)));
+    max-height: calc(100% - 16px - var(--safe-t) - var(--safe-b));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 22px;
+    align-items: start;
+  }
+  .menu-col {
+    gap: 8px;
+  }
+  .menu-col-b {
+    padding-top: calc(var(--corner-h) - 8px);
+  }
+  #menu-kicker {
+    display: none;
+  }
+}
+
+/* Motion is decoration everywhere in the shell; honour the request to stop. */
+@media (prefers-reduced-motion: reduce) {
+  .mini-lift,
+  .stop.next,
+  #door-howto.nudge,
+  .egg,
+  .win-cell svg,
+  .win-cell .sym-fallback {
+    animation: none;
+  }
+}
