@@ -37,6 +37,13 @@ which lane owns which file.
 Plain ES modules with explicit `.js` imports, no dependencies, nothing
 bundled or minified: what ships is what was written.
 
+## Tests
+
+The engine has a committed suite: `node --test tests/*.test.mjs` checks
+uniqueness, seed determinism, tier gating and hints across the trail bands.
+`node tools/bench.mjs` prints generation times per band. Nothing else is
+automated; the rest is playtested by hand.
+
 ## Storage
 
 All on the device, in `localStorage`, under `zoodoku.*` keys: trail progress,

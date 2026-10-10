@@ -324,6 +324,38 @@ named file, and read its comments — they carry the pitfalls.
 
 Hub §11: `node --check` every file, grep sweep, no console errors, a manual
 playtest checklist. The engine lane is the exception that earns a committed
-test: `node --test tests/` must pass (uniqueness, determinism, tier gating
+test: `node --test tests/*.test.mjs` must pass (Node 22 does not expand a bare directory) (uniqueness, determinism, tier gating
 for a sample of trail levels) and `node tools/bench.mjs` prints generation
 times per band. Nobody starts a dev server.
+
+## 8. Ratified after the first build (2026-10-10)
+
+What the lanes found when the code met the plan. These override the sections
+above where they disagree.
+
+- **Trail clue ranges, 9×9.** T3 is 26–32 and T4–T6 are 24–32. A
+  180°-symmetric board that cannot lose another clue lands at 24–32 clues
+  whatever its tier, so the first table's narrower ranges missed on almost
+  every attempt.
+- **4×4 grades flat.** Every 4×4 is T0 (box singles always suffice), so
+  levels 1–14 climb by fewer clues and a thinner `minAvail`, not by technique.
+- **Honest misses.** `Puzzle.tier` is the *graded* tier; `bandTier` is what
+  the level asked for, and `hit:false` says when a required tier was not
+  reached within budget. Use `bandTier` for labels. `notes` follows the band,
+  so it is the same for every puzzle of a level.
+- **Free-roam `spec.tier` is 0-based** (paws − 1), and so is the seed.
+- **Threading.** 9×9 and every required-tier band (incl. 6×6 levels 31–34) go
+  to one long-lived module worker; any failure falls back to the main thread.
+  T5 is the only slow band: ~1% of attempts hit, worst case ~0.85 s in Node,
+  so 2–4 s on a phone behind the "hatching" egg.
+- **Hint shape extras.** `unit.type` may be `'cell'` (naked single) or
+  `'group'` (fish, XY-wing), with `index: -1`. Elimination-only steps carry
+  `then: {cell, digit, technique}`, the placement they unlock; "Show me" removes
+  the pencilled marks if there are any, otherwise places `then`.
+- **Hint tiers are worded** "Tell me more" → "Show me", with "Got it" at
+  every tier. A wrong entry goes "Something here doesn't fit." → "Which one?" →
+  "Take it off" (one undoable clear).
+- **Shell.** The title also has a *Trail map* door (otherwise the map is
+  unreachable while a free-roam run is saved). The conflict setting reads
+  "Clash marks". The free-roam picker is remembered for the session only — no
+  storage key was invented for it.
