@@ -1112,6 +1112,9 @@ h3 {
   max-height: calc(100% - var(--corner-space) - 12px - var(--safe-b));
   overflow: auto;
   display: grid;
+  /* If fit-content is ignored the panel fills its inset box; at least keep
+     the rows their own height instead of stretching them (see .confirm-panel). */
+  align-content: start;
   gap: 14px;
   animation: fade-in 0.18s ease both;
 }
@@ -1149,15 +1152,24 @@ body.confirming::before {
   z-index: 50;
   background: rgba(18, 56, 53, 0.6);
 }
+/* Centred with top/left 50% and the `translate` property rather than
+   inset:0 + margin:auto + height:fit-content. Where fit-content is not
+   honoured (an iPad, 2026-10-10) a fixed box with inset:0 stretches to the
+   whole viewport and its grid rows stretch with it, so Keep it / Leave it
+   came out half a screen tall. `translate` is separate from `transform`, so
+   the fade-in animation still runs. align-content:start is the belt to that
+   pair of braces. */
 .confirm-panel {
   position: fixed;
   z-index: 51;
-  inset: 0;
-  margin: auto;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
   width: min(360px, calc(100% - 32px));
-  height: max-content;
-  height: fit-content;
+  max-height: calc(100% - 32px);
+  overflow: auto;
   display: grid;
+  align-content: start;
   gap: 10px;
   text-align: center;
   animation: fade-in 0.15s ease both;

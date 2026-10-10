@@ -359,3 +359,6 @@ above where they disagree.
   unreachable while a free-roam run is saved). The conflict setting reads
   "Clash marks". The free-roam picker is remembered for the session only — no
   storage key was invented for it.
+- **`opts.coachFades`** (play): the first-6×6 / first-9×9 note is said once
+  for eight seconds and goes; only a tutorial's `coach` stands for the whole
+  board. Found on an iPad: the 9×9 note never went away.

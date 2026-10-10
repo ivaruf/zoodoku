@@ -505,13 +505,15 @@ export function mountPlay(container, opts) {
 
   // ---- coach ----------------------------------------------------------------------------------
 
+  /** The line the coach goes back to when a hint or a remark is done. */
+  const standing = opts.coachFades ? '' : opts.coach || '';
   let sayTimer = 0;
   /** A short coach line with no buttons, which goes away by itself. */
   function say(text, ms = 3200) {
     showCoach(text, null);
     clearTimeout(sayTimer);
     sayTimer = setTimeout(() => {
-      if (!hint) showCoach(opts.coach || '', null);
+      if (!hint) showCoach(standing, null);
     }, ms);
   }
 
@@ -564,7 +566,7 @@ export function mountPlay(container, opts) {
     hint = null;
     tier = 0;
     board.clearHint();
-    showCoach(opts.coach || '', null);
+    showCoach(standing, null);
   }
 
   const name = (d) => symbolName(d, skin);
@@ -847,7 +849,11 @@ export function mountPlay(container, opts) {
 
   paintTrayArt();
   renderAll();
-  showCoach(opts.coach || '', null);
+  // A tutorial coach stands for the whole board; a "bigger boxes now" note
+  // (opts.coachFades) says its piece once and goes, or it would sit above
+  // the tray for every move of a 9×9.
+  if (opts.coachFades && opts.coach) say(opts.coach, 8000);
+  else showCoach(standing, null);
   layout();
 
   // ---- the handle --------------------------------------------------------------------------------------

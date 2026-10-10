@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.1.0'; // first build: the trail, free roam, the three-board tutorial
+const VERSION = 'v0.1.1'; // iPad: confirm no longer fills the screen; the new-size coach note fades
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until

@@ -242,7 +242,7 @@ async function begin(spec, from) {
   if (ticket !== loadTicket) return; // backed out, or asked for another
   ui.setHatching(false);
   const skin = spec.kind === "trail" ? LEVELS[spec.level - 1].skin : free.skin;
-  const extra = spec.kind === "trail" ? { coach: coachFor(spec.level) } : {};
+  const extra = spec.kind === "trail" ? { coach: coachFor(spec.level), coachFades: true } : {};
   mount(spec, puzzle, skin, null, extra);
 }
 
@@ -270,7 +270,7 @@ function beginTutorial(index) {
   });
 }
 
-function mount(spec, puzzle, skin, saved, { emphasis = null, coach = null }) {
+function mount(spec, puzzle, skin, saved, { emphasis = null, coach = null, coachFades = false }) {
   current = { spec, puzzle, skin };
   const opts = {
     puzzle,
@@ -279,6 +279,7 @@ function mount(spec, puzzle, skin, saved, { emphasis = null, coach = null }) {
     settings: { ...settings },
     emphasis,
     coach,
+    coachFades,
     onChange: (state) => persist(state),
     onSolved: () => solved(spec),
   };
