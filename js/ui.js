@@ -365,7 +365,6 @@ export function paintMenu({ inPlay, skin, conflicts, leaveLabel }) {
   $("menu-skin-row").hidden = !inPlay;
   $("menu-board-actions").hidden = !inPlay;
   $("menu-close").hidden = inPlay; // Resume is the way back in play
-  menuInPlay = !!inPlay;
   paintMenuExit();
   $("menu-leave").textContent = t(leaveLabel || "door.levels");
   for (const b of $("menu-skin").querySelectorAll("button")) {
@@ -522,8 +521,7 @@ function paintExit() {
   }
   // The words live in a <span> beside the shared back arrow; writing the
   // button's textContent would wipe the arrow. Both buttons are painted
-  // whether or not they are showing, because the menu's copy is hidden on
-  // the settings face and must be right the moment the pause face shows it.
+  // whether or not they are showing, so each is right the moment it shows.
   for (const id of ["title-exit", "menu-exit"]) {
     const el = $(id);
     const words = el && el.querySelector(".exit-label");
@@ -531,15 +529,14 @@ function paintExit() {
   }
 }
 
-/** Whether the menu is showing its pause face; the exit goes only there. */
-let menuInPlay = false;
 
-/** The menu's copy of the way out: on the pause face, never on the settings
- *  face opened from the title or a list screen — that is a second panel, and
- *  the way out there is the title's own button (hub §2, "One button"). */
+/** The menu's copy of the way out, on BOTH faces: since the corner rule of
+ *  2026-10-11 the panel behind the three bars is the game's one menu, and it
+ *  holds the sliders, the language row and the way out wherever it is opened
+ *  (hub §2, "The corner"). Shown only once arcade/exit.js answered. */
 function paintMenuExit() {
   const el = $("menu-exit");
-  if (el) el.hidden = !(exitApi && menuInPlay);
+  if (el) el.hidden = !exitApi;
 }
 
 /**

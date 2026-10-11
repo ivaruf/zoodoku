@@ -598,12 +598,15 @@ on("menu-leave", () => {
   } else showTrail();
 });
 
-// Language: the row in the menu panel. Live — the menu stays open, the
-// board stays paused exactly as it was, and focus stays on the pressed flag.
-$("menu-lang").addEventListener("click", (e) => {
-  const b = e.target.closest("button[data-lang]");
-  if (b) setLang(b.dataset.lang);
-});
+// Language: the row in the menu panel and its twin on the start screen.
+// Live — the menu stays open, the board stays paused exactly as it was, and
+// focus stays on the pressed flag.
+for (const id of ["menu-lang", "title-lang"]) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-lang]");
+    if (b) setLang(b.dataset.lang);
+  });
+}
 
 // The in-page confirm.
 on("confirm-yes", () => ui.answerConfirm(true));

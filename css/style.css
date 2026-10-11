@@ -729,6 +729,13 @@ h3 {
 .door-pair .btn {
   min-width: 0;
 }
+/* The language row on the title sits on the meadow, not on a card, so its
+   caption takes the tagline's cream instead of the panels' ink, and only the
+   room it needs: the two flags get the rest of the column, equal. */
+.title-lang .label {
+  flex: 0 0 auto;
+  color: var(--board);
+}
 #door-howto {
   flex-direction: row;
   gap: 8px;
