@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.2.0'; // Norsk first, English one tap away in the menu; menus say plain words
+const VERSION = 'v0.2.1'; // One way out, last on the title and the pause menu, and Escape walks toward it
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until

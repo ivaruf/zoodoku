@@ -284,6 +284,28 @@ h3 {
   background: var(--shade);
 }
 
+/* The way back to the arcade: one button, the same in every cabinet (hub §2).
+   A ghost (above) in the zoo's palette, never the sun fill — leaving is never
+   the recommended door — with the hub's back arrow before the words, drawn
+   like the corner glyphs. A row, not the .btn column, so arrow and words sit
+   on one line; a little more air above it than between the other doors, so
+   the way out is never mistaken for one more choice. */
+.btn.exit {
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 8px;
+}
+.exit-glyph {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Visible focus, everywhere, in the sun colour so it reads on teal and cream. */
 .btn:focus-visible,
 .seg button:focus-visible,
@@ -1145,14 +1167,20 @@ h3 {
   outline: none;
 }
 /* The menu scrolls as a last resort, and a scrolling box clips anything hung
-   outside it, so its leaf is pinned inside the bottom-right corner instead
-   of over the top-left edge. */
-.menu-panel::before,
+   outside it, so its leaf is pinned inside a corner instead of over the
+   top-left edge. The confirm keeps it bottom-right; the menu's bottom edge
+   now belongs to the way out (last, full width), which the leaf would sit on,
+   so the menu's leaf goes top-right, beside the short title. */
 .confirm-panel::before {
   top: auto;
   left: auto;
   bottom: 10px;
   right: 14px;
+}
+.menu-panel::before {
+  top: 18px;
+  left: auto;
+  right: 16px;
 }
 .menu-col {
   display: grid;
@@ -1416,8 +1444,24 @@ body.confirming::before {
   .menu-col {
     gap: 8px;
   }
+  /* The right column is a flex column stretched to the panel's height, and
+     the way out takes the slack above it, so it lands in the bottom-right
+     corner level with the left column's last row: the same place every time,
+     well away from the settings above it (hub §2, "One button"). */
   .menu-col-b {
     padding-top: calc(var(--corner-h) - 8px);
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+  }
+  #menu-exit {
+    margin-top: auto;
+  }
+  /* The top-right corner is under the corner plates here, so the leaf
+     moves to the top of the left column, beside the title. */
+  .menu-panel::before {
+    right: auto;
+    left: calc(50% - 52px);
   }
   #menu-kicker {
     display: none;

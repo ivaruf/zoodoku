@@ -111,11 +111,13 @@
             <span id="howto-tag" class="howto-tag" data-i18n="door.newHere" hidden>Ny her?</span>
             <span data-i18n="door.howto">Slik spiller du</span>
           </button>
-          <!-- The way OUT. Plain words, never the game's voice (hub §2).
-               Hidden until arcade/exit.js says there is somewhere to go;
-               js/ui.js words it in the current language. -->
+          <!-- The way OUT, the same button in every cabinet (hub §2, "One
+               button"): last in the column, a ghost and never the primary
+               fill, the shared back arrow, sentence case. Hidden until
+               arcade/exit.js says there is somewhere to go; js/ui.js words
+               the <span> in the current language, so the arrow survives. -->
           <button type="button" id="title-exit" class="btn ghost exit" hidden>
-            Tilbake til arkaden
+            <svg class="exit-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg><span class="exit-label">Tilbake til arkaden</span>
           </button>
         </nav>
 
@@ -402,8 +404,14 @@
              level its listener already chose. -->
         <p class="hint" id="menu-sound-hint" data-i18n="menu.soundHint">Det er stille i dyrehagen ennå — lyden kommer snart.</p>
 
-        <button type="button" id="menu-exit" class="btn ghost exit" hidden>Tilbake til arkaden</button>
         <button type="button" id="menu-close" class="btn ghost" data-i18n="back">Tilbake</button>
+        <!-- The way out, LAST in the column so it is always in the same place
+             and never read as a setting. Only on the pause face: opened from
+             the title this panel is settings, a second panel, and the way
+             out lives on the title itself (hub §2). js/ui.js decides. -->
+        <button type="button" id="menu-exit" class="btn ghost exit" hidden>
+          <svg class="exit-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg><span class="exit-label">Tilbake til arkaden</span>
+        </button>
       </div>
     </section>
 

@@ -365,6 +365,8 @@ export function paintMenu({ inPlay, skin, conflicts, leaveLabel }) {
   $("menu-skin-row").hidden = !inPlay;
   $("menu-board-actions").hidden = !inPlay;
   $("menu-close").hidden = inPlay; // Resume is the way back in play
+  menuInPlay = !!inPlay;
+  paintMenuExit();
   $("menu-leave").textContent = t(leaveLabel || "door.levels");
   for (const b of $("menu-skin").querySelectorAll("button")) {
     b.setAttribute("aria-pressed", String(b.dataset.skin === skin));
@@ -518,10 +520,39 @@ function paintExit() {
   } catch {
     label = t("exit.arcade");
   }
+  // The words live in a <span> beside the shared back arrow; writing the
+  // button's textContent would wipe the arrow. Both buttons are painted
+  // whether or not they are showing, because the menu's copy is hidden on
+  // the settings face and must be right the moment the pause face shows it.
   for (const id of ["title-exit", "menu-exit"]) {
     const el = $(id);
-    if (el && !el.hidden) el.textContent = label;
+    const words = el && el.querySelector(".exit-label");
+    if (words) words.textContent = label;
   }
+}
+
+/** Whether the menu is showing its pause face; the exit goes only there. */
+let menuInPlay = false;
+
+/** The menu's copy of the way out: on the pause face, never on the settings
+ *  face opened from the title or a list screen — that is a second panel, and
+ *  the way out there is the title's own button (hub §2, "One button"). */
+function paintMenuExit() {
+  const el = $("menu-exit");
+  if (el) el.hidden = !(exitApi && menuInPlay);
+}
+
+/**
+ * The start screen's way out, for Escape (hub §2: "the start screen, nothing
+ * open → Escape is the Back to arcade button: the same quit(), and only when
+ * that button is shown"). Clicking the button itself keeps one path, so the
+ * 'refused' handling below is shared. Returns whether it did anything.
+ */
+export function quitFromTitle() {
+  const el = $("title-exit");
+  if (!el || el.hidden || el.disabled) return false;
+  el.click();
+  return true;
 }
 
 export function wireExit() {
@@ -540,7 +571,7 @@ export function wireExit() {
   for (const id of ["title-exit", "menu-exit"]) {
     const el = $(id);
     if (!el) continue;
-    el.hidden = false;
+    if (id === "title-exit") el.hidden = false; // the menu's copy: paintMenuExit()
     el.addEventListener("click", () => {
       Promise.resolve(exit.quit())
         .then((how) => {
@@ -555,6 +586,7 @@ export function wireExit() {
     });
   }
   paintExit();
+  paintMenuExit();
   return true;
 }
 

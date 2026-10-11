@@ -47,7 +47,8 @@ old is proud to be good at, with numbers as a *promotion*, not a punishment.
     stamp it. Tap the picked tile again to drop it.
   - Whichever is touched first decides. Keyboard: arrows move the cursor,
     1–N place, Backspace/Delete/0 clear, N toggles notes, H hint, Z/Ctrl+Z
-    undo, Escape opens the menu.
+    undo, Escape opens the menu (and closes it again; elsewhere it is one
+    step back, and on the title it is Back to arcade — hub §2).
 - **Notes (pencil marks)** appear from the first trail level that can need them
   (6×6 tier 3 and all 9×9; free roam same rule). A notes toggle in the toolbar;
   in notes mode a drop/tap toggles a small mark. Placing an entry auto-removes
@@ -313,6 +314,8 @@ named file, and read its comments — they carry the pitfalls.
   `exit.framed() || exit.standalone()` (not `offers()`), label from
   `exit.verb({ arcade: "Back to arcade", app: "Close" })`, handle `'refused'`.
   Retry the wiring on `load` and after 1500 ms (`lobbots/js/main.js:950-963`).
+  Last on the title and on the pause face of the menu (never its settings
+  face), a ghost with the hub's back arrow, sentence case.
 - **Crash bar** — `lobbots/index.html:537-582` (capture-phase `error`, skip
   `data-handled`, name the entry point and say the culprit may be an import),
   CSS `lobbots/css/style.css:1448-1460`.

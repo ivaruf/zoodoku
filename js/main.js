@@ -639,9 +639,28 @@ ui.setMuted(muted);
 /* ============================================================= keyboard */
 
 /*
- * Escape belongs to the shell (the play surface leaves it alone, DESIGN §5):
- * it answers an open question "no", closes an open menu, and otherwise opens
- * the menu — on every screen, because the menu is on every screen.
+ * Escape belongs to the shell (the play surface leaves it alone, DESIGN §5;
+ * js/input.js returns before it looks at the key), and it always goes ONE
+ * step back toward the way out (hub §2, "Escape goes one step back"):
+ *
+ *   an open question        → "no", as its own No button
+ *   the menu, either face   → closed: the settings face's Back, or on the
+ *                             pause face the run carries on (closeMenu
+ *                             resumes exactly what openMenu paused)
+ *   a board in play         → the menu opens and the board pauses
+ *   the egg still hatching  → its Back (there is no board yet to pause)
+ *   the level map, the free
+ *   picker, the win card    → their own step back: Back, Back, and the
+ *                             win card's second door (the list it came from)
+ *   the title, nothing open → the Back to arcade button itself, only when it
+ *                             is shown; otherwise nothing at all
+ *
+ * So Escape never throws a run away in one press, and Escape, Escape from
+ * anywhere lands on the title, where the way out is. It used to open the
+ * settings face on every screen, which never got anyone out. One key, one
+ * action: preventDefault, and nothing else on the page handles Escape, so the
+ * same press cannot also reach the board. Auto-repeat is ignored, so holding
+ * the key cannot walk all the way out of a run and the zoo in one go.
  * M toggles mute anywhere outside a text field.
  *
  * Tab is kept inside an open dialog: aria-modal tells a screen reader the
@@ -651,9 +670,10 @@ ui.setMuted(muted);
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
+    if (e.repeat) return;
     if (ui.confirmOpen()) ui.answerConfirm(false);
     else if (ui.menuOpen()) closeMenu();
-    else openMenu();
+    else escapeFromScreen(ui.screenNow());
     return;
   }
   if (e.key === "Tab") {
@@ -667,6 +687,24 @@ window.addEventListener("keydown", (e) => {
     setMuted(!muted);
   }
 });
+
+/** Escape with nothing open: each screen's own step back (see above). Each
+ *  case presses the visible button rather than calling its handler, so the
+ *  key can never do something the button on screen would not. */
+function escapeFromScreen(screen) {
+  const press = (id) => {
+    const el = $(id);
+    if (el && !el.hidden && !el.disabled && !el.closest("[hidden]")) el.click();
+  };
+  if (screen === "title") ui.quitFromTitle();
+  else if (screen === "trail") press("trail-back");
+  else if (screen === "free") press("free-back");
+  else if (screen === "win") press("win-other");
+  else if (screen === "play") {
+    if (!$("hatching").hidden) press("hatching-back");
+    else openMenu();
+  }
+}
 
 function trapTab(dialog, e) {
   const items = [...dialog.querySelectorAll("button, input")].filter((el) => !el.disabled && !el.closest("[hidden]"));
