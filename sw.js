@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.2.3'; // precache reads past the browser's HTTP cache, so an update can never mix old and new files
+const VERSION = 'v0.2.4'; // the language row lives in the menu panel only; the title keeps the ways in and the way out
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until

@@ -111,43 +111,6 @@
             <span id="howto-tag" class="howto-tag" data-i18n="door.newHere" hidden>Ny her?</span>
             <span data-i18n="door.howto">Slik spiller du</span>
           </button>
-          <!--
-            LANGUAGE, on the start screen itself as a visible row (hub §2,
-            "Two languages", Where): the stranger who cannot read the
-            Norwegian the zoo opened in must not have to guess that the three
-            bars hide it. Above the way out, which stays last. The same row is
-            in the menu panel; this copy's Union Jack uses zd-t- clipPath ids,
-            because ids are page-global and the second flag would otherwise
-            clip against the first. js/i18n.js keeps aria-pressed true on
-            every [data-lang] button wherever it is.
-          -->
-          <div class="row title-lang">
-            <span class="label" id="title-lang-label" data-i18n="menu.lang">Språk</span>
-            <div id="title-lang" class="seg lang" role="group" aria-labelledby="title-lang-label">
-              <button type="button" data-lang="nb" lang="nb" aria-pressed="true">
-                <svg class="flag" viewBox="0 0 22 16" aria-hidden="true">
-                  <rect width="22" height="16" fill="#ba0c2f"/>
-                  <path d="M6 0h4v16H6zM0 6h22v4H0z" fill="#fff"/>
-                  <path d="M7 0h2v16H7zM0 7h22v2H0z" fill="#00205b"/>
-                </svg>
-                <span>Norsk</span>
-              </button>
-              <button type="button" data-lang="en" lang="en" aria-pressed="false">
-                <svg class="flag" viewBox="0 0 60 30" aria-hidden="true">
-                  <clipPath id="zd-t-uk-clip"><path d="M0 0v30h60V0z"/></clipPath>
-                  <clipPath id="zd-t-uk-diag"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath>
-                  <g clip-path="url(#zd-t-uk-clip)">
-                    <path d="M0 0v30h60V0z" fill="#012169"/>
-                    <path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/>
-                    <path d="M0 0l60 30m0-30L0 30" clip-path="url(#zd-t-uk-diag)" stroke="#c8102e" stroke-width="4"/>
-                    <path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/>
-                    <path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/>
-                  </g>
-                </svg>
-                <span>English</span>
-              </button>
-            </div>
-          </div>
           <!-- The way OUT, the same button in every cabinet (hub §2, "One
                button"): last in the column, a ghost and never the primary
                fill, the shared back arrow, sentence case. Hidden until
@@ -381,7 +344,7 @@
           endonym in its own language with a lang attribute, and aria-pressed
           on the chosen one. The flags are kitchens/index.html's, to the path;
           the Union Jack's clipPath ids are page-global, so they carry a zd-
-          prefix, and the start screen's copy a zd-t- one. Switching is live: the
+          prefix and this is the only copy on the page. Switching is live: the
           panel stays open and the board stays paused (js/main.js).
         -->
         <div class="row">
