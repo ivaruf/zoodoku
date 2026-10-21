@@ -29,7 +29,7 @@ which lane owns which file.
 
 | Lane | Files |
 |---|---|
-| Shell & menus | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/i18n.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `sw.js`, `manifest.webmanifest` |
+| Shell & menus | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/i18n.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `js/intro.js`, `sw.js`, `manifest.webmanifest` |
 | Play surface | `js/play.js`, `js/game.js`, `js/board.js`, `js/input.js`, `css/board.css` |
 | Engine | `js/engine.js`, `js/gen-worker.js`, `js/levels.js`, `js/generator.js`, `js/solver.js`, `js/techniques.js`, `js/grader.js`, `js/hints.js`, `js/grid.js`, `js/rng.js`, `tests/`, `tools/bench.mjs` |
 | Art | `js/animals.js`, `tools/make-icons.py`, `icons/` |

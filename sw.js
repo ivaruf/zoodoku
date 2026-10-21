@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.2.4'; // the language row lives in the menu panel only; the title keeps the ways in and the way out
+const VERSION = 'v0.2.5'; // open on a sting: the animals hop into a board that lands on the title
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until
@@ -42,6 +42,7 @@ const ASSETS = [
   './js/update.js',
   './js/i18n.js',
   './js/touch-guard.js',
+  './js/intro.js',
   // Lane B — play surface
   './css/board.css',
   './js/play.js',

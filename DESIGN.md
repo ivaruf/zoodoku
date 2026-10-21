@@ -164,7 +164,7 @@ note it in your report and the integrator (the orchestrating session) does it.
 |---|---|---|
 | **A — Engine** | engine agent | `js/rng.js`, `js/grid.js`, `js/solver.js`, `js/techniques.js`, `js/grader.js`, `js/generator.js`, `js/levels.js`, `js/hints.js`, `js/engine.js`, `js/gen-worker.js`, `tests/engine.test.mjs`, `tools/bench.mjs` |
 | **B — Play surface** | play agent | `js/game.js`, `js/play.js`, `js/board.js`, `js/input.js`, `css/board.css` |
-| **C — Shell & menus** | shell agent | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `sw.js`, `manifest.webmanifest`, `README.md` |
+| **C — Shell & menus** | shell agent | `index.html`, `css/style.css`, `js/main.js`, `js/ui.js`, `js/store.js`, `js/screen.js`, `js/update.js`, `js/touch-guard.js`, `js/intro.js`, `sw.js`, `manifest.webmanifest`, `README.md` |
 | **D — Art** | art agent | `js/animals.js`, `tools/make-icons.py`, `icons/*` |
 
 Integrator owns `DESIGN.md` and the final wiring pass.
