@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.2.6'; // the precache answers only from its own cache, fullscreen survives an engine that throws, and the menu plate stops promising Esc
+const VERSION = 'v0.2.7'; // offline, the way back to the arcade still loads from the arcade's own cache
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until
@@ -118,7 +118,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put(request, copy));
         }
         return res;
-      }).catch(() => (request.mode === 'navigate' ? caches.match('./index.html', { cacheName: CACHE }) : undefined));
+      }).catch(() => (request.mode === 'navigate'
+        ? caches.match('./index.html', { cacheName: CACHE })
+        // Offline: ../arcade/exit.js is not ours to precache, so any cache's copy will do.
+        : caches.match(request, { ignoreSearch: true })));
     })
   );
 });

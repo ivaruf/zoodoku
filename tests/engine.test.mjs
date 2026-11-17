@@ -1,7 +1,7 @@
 /*
  * engine.test.mjs — the engine lane's committed test (DESIGN §7).
  *
- *   node --test tests/
+ *   node --test tests/engine.test.mjs
  *
  * What it proves, and why each matters:
  *   - geometry is right for all three shapes, 2×3 boxes included;
