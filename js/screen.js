@@ -77,11 +77,15 @@ if (button && request && exit) {
     // click on whatever is underneath (DESIGN §6, "corner clicks
     // stopPropagation").
     event.stopPropagation();
-    const result = isFullscreen() ? exit.call(document) : request.call(root);
-    // Both return promises that can reject — a permissions policy, a declined
-    // prompt. fullscreenchange already reports what really happened, so this
-    // exists only to stop a refusal reaching index.html's crash bar.
-    if (result && typeof result.catch === "function") result.catch(() => {});
+    try {
+      const result = isFullscreen() ? exit.call(document) : request.call(root);
+      // Both return promises that can reject — a permissions policy, a declined
+      // prompt. fullscreenchange already reports what really happened, so this
+      // exists only to stop a refusal reaching index.html's crash bar.
+      if (result && typeof result.catch === "function") result.catch(() => {});
+    } catch {
+      // An older engine throws where a newer one rejects; same refusal.
+    }
   });
 
   document.addEventListener("fullscreenchange", paint);

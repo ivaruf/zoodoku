@@ -21,7 +21,7 @@
 // All paths are RELATIVE, because the game is served from /zoodoku/ and also
 // framed by the arcade from a sibling directory.
 
-const VERSION = 'v0.2.5'; // open on a sting: the animals hop into a board that lands on the title
+const VERSION = 'v0.2.6'; // the precache answers only from its own cache, fullscreen survives an engine that throws, and the menu plate stops promising Esc
 const CACHE = `zoodoku-${VERSION}`;
 
 // EVERY SHIPPED FILE, from all four lanes (DESIGN §4). install blocks until
@@ -110,7 +110,7 @@ self.addEventListener('fetch', (event) => {
   // ahead of the engine it calls. New versions arrive as a whole new cache
   // through install/activate above, never file by file.
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((hit) => {
+    caches.match(request, { cacheName: CACHE, ignoreSearch: true }).then((hit) => {
       if (hit) return hit;
       return fetch(request).then((res) => {
         if (res.ok && res.type === 'basic') {
@@ -118,7 +118,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put(request, copy));
         }
         return res;
-      }).catch(() => (request.mode === 'navigate' ? caches.match('./index.html') : undefined));
+      }).catch(() => (request.mode === 'navigate' ? caches.match('./index.html', { cacheName: CACHE }) : undefined));
     })
   );
 });
